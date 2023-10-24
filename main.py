@@ -66,6 +66,33 @@ def linear_interp(x, x0, x1, y0, y1):
 
 
 def control_air_and_fuel(temp):
+    """
+    Heater Control Analysis:
+
+    Given a target temperature of 60°C, the control system adjusts the fan speed and pump frequency based on the current temperature.
+    This is very rough and needs more work
+
+    ------------------------------
+    | Current Temp (°C) | Delta (°C) | Normalized Delta | Fan Speed (RPM) | Pump Frequency (Hz) |
+    |-------------------|------------|------------------|-----------------|---------------------|
+    | 0                 | 60         | 1                | 5000            | 5                   |
+    | 10                | 50         | 1                | 5000            | 5                   |
+    | 20                | 40         | 1                | 5000            | 5                   |
+    | 30                | 30         | 1                | 5000            | 5                   |
+    | 40                | 20         | 1                | 5000            | 5                   |
+    | 50                | 10         | 0.5              | 3500            | 3                   |
+    | 60                | 0          | 0                | 2000            | 1                   |
+    | 70                | -10        | 0                | 2000            | 1                   |
+    | 80                | -20        | 0                | 2000            | 1                   |
+    | 90                | -30        | 0                | 2000            | 1                   |
+    ------------------------------
+
+    Observations:
+    - The system operates at maximum fan speed and pump frequency when the current temperature is significantly below the target.
+    - As the temperature approaches the target, the control actions are reduced.
+    - Once the temperature meets or exceeds the target, both the fan and pump are set to their minimum values to avoid overshooting and maintain the desired temperature.
+    """
+
     delta = TARGET_TEMP - temp
     max_delta = 20
 
