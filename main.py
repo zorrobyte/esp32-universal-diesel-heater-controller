@@ -31,7 +31,8 @@ FAN_SPEED_SENSOR_PIN = 14
 SWITCH_PIN = 15  # Single pole switch pin
 
 # Initialize pins
-air_mosfet = machine.Pin(AIR_PIN, machine.Pin.OUT)
+air_pwm = machine.PWM(machine.Pin(AIR_PIN))
+air_pwm.freq(1000)  # Set PWM frequency to 1kHz
 fuel_mosfet = machine.Pin(FUEL_PIN, machine.Pin.OUT)
 glow_mosfet = machine.Pin(GLOW_PIN, machine.Pin.OUT)
 water_mosfet = machine.Pin(WATER_PIN, machine.Pin.OUT)
@@ -52,13 +53,11 @@ ow_exhaust = OneWire(machine.Pin(EXHAUST_TEMP_SENSOR_PIN))
 temp_sensor_water = DS18X20(ow_water)
 temp_sensor_exhaust = DS18X20(ow_exhaust)
 
-
 def read_water_temp():
     roms = temp_sensor_water.scan()
     temp_sensor_water.convert_temp()
     time.sleep_ms(750)
     return temp_sensor_water.read_temp(roms[0])
-
 
 def read_exhaust_temp():
     roms = temp_sensor_exhaust.scan()
@@ -66,10 +65,8 @@ def read_exhaust_temp():
     time.sleep_ms(750)
     return temp_sensor_exhaust.read_temp(roms[0])
 
-
 def linear_interp(x, x0, x1, y0, y1):
     return y0 + (y1 - y0) * (x - x0) / (x1 - x0)
-
 
 def control_air_and_fuel(temp):
     delta = TARGET_TEMP - temp
@@ -77,25 +74,20 @@ def control_air_and_fuel(temp):
 
     normalized_delta = min(max(delta / max_delta, 0), 1)
 
-    fan_voltage = linear_interp(normalized_delta, 0, 1, 2000, 5000)
+    fan_duty = int(linear_interp(normalized_delta, 0, 1, 0, 1023))
     pump_frequency = linear_interp(normalized_delta, 0, 1, 1, 5)
 
-    if fan_voltage > 3500:
-        air_mosfet.on()
-    else:
-        air_mosfet.off()
+    air_pwm.duty(fan_duty)  # Set PWM duty cycle for the fan
 
     if pump_frequency > 3:
         fuel_mosfet.on()
     else:
         fuel_mosfet.off()
 
-
 if USE_WIFI:
     # Initialize WiFi
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
-
 
     def connect_wifi():
         if not wlan.isconnected():
@@ -108,7 +100,6 @@ if USE_WIFI:
 if USE_MQTT:
     mqtt_client = None
 
-
     def connect_mqtt():
         global mqtt_client
         print("Connecting to MQTT...")
@@ -118,7 +109,6 @@ if USE_MQTT:
         mqtt_client.subscribe(SET_TEMP_TOPIC)
         mqtt_client.subscribe(COMMAND_TOPIC)
         print("Connected to MQTT!")
-
 
     def mqtt_callback(topic, msg):
         global TARGET_TEMP
@@ -133,7 +123,6 @@ if USE_MQTT:
             elif msg == "stop":
                 shut_down()
 
-
     def publish_sensor_values():
         water_temp = read_water_temp()
         exhaust_temp = read_exhaust_temp()
@@ -143,29 +132,26 @@ if USE_MQTT:
         }
         mqtt_client.publish(SENSOR_VALUES_TOPIC, str(payload))
 
-
 def start_up():
     water_mosfet.on()
     glow_mosfet.on()
     while read_exhaust_temp() < BURN_CHAMBER_SAFE_TEMP:
-        time.sleep(5) #TODO REMOVE THIS
+        time.sleep(5)
     glow_mosfet.off()
-    air_mosfet.on()
+    air_pwm.duty(1023)  # Set fan to full speed
     fuel_mosfet.on()
-
 
 def shut_down():
     fuel_mosfet.off()
-    air_mosfet.off()
+    air_pwm.duty(0)  # Turn off the fan
     glow_mosfet.on()
     time.sleep(60)
     glow_mosfet.off()
     while read_exhaust_temp() > EXHAUST_SHUTDOWN_TEMP:
-        air_mosfet.on()
-        time.sleep(5) #TODO REMOVE THIS
-    air_mosfet.off()
+        air_pwm.duty(1023)  # Set fan to full speed
+        time.sleep(5)
+    air_pwm.duty(0)  # Turn off the fan
     water_mosfet.off()
-
 
 def main():
     system_running = False
@@ -210,8 +196,6 @@ def main():
             control_air_and_fuel(water_temp)
 
         # time.sleep(1)  # Optional delay to avoid overloading the system
-
-
 
 if __name__ == "__main__":
     main()
