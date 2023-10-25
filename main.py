@@ -1,12 +1,12 @@
 import machine
 import time
-import network
-from umqtt.simple import MQTTClient
 
-# Constants
+### Configuration ###
+USE_WIFI = True
+USE_MQTT = True
 TARGET_TEMP = 60.0  # target temperature in Celsius
 EXHAUST_SAFE_TEMP = 120.0  # safety threshold in Celsius
-EXHAUST_SHUTDOWN_TEMP = 37.8  # 100°F in Celsius
+EXHAUST_SHUTDOWN_TEMP = 37.8  # Temp when the fan stops running during shutdown
 BURN_CHAMBER_SAFE_TEMP = 150.0  # Temperature to ensure stable combustion in Celsius
 
 # WiFi Credentials
@@ -37,6 +37,12 @@ glow_mosfet = machine.Pin(GLOW_PIN, machine.Pin.OUT)
 water_mosfet = machine.Pin(WATER_PIN, machine.Pin.OUT)
 switch_pin = machine.Pin(SWITCH_PIN, machine.Pin.IN, machine.Pin.PULL_UP)
 
+if USE_WIFI:
+    import network
+
+if USE_MQTT:
+    from umqtt.simple import MQTTClient
+
 # Initialize DS18B20 temperature sensors
 from ds18x20 import DS18X20
 from onewire import OneWire
@@ -66,33 +72,6 @@ def linear_interp(x, x0, x1, y0, y1):
 
 
 def control_air_and_fuel(temp):
-    """
-    Heater Control Analysis:
-
-    Given a target temperature of 60°C, the control system adjusts the fan speed and pump frequency based on the current temperature.
-    This is very rough and needs more work
-
-    ------------------------------
-    | Current Temp (°C) | Delta (°C) | Normalized Delta | Fan Speed (RPM) | Pump Frequency (Hz) |
-    |-------------------|------------|------------------|-----------------|---------------------|
-    | 0                 | 60         | 1                | 5000            | 5                   |
-    | 10                | 50         | 1                | 5000            | 5                   |
-    | 20                | 40         | 1                | 5000            | 5                   |
-    | 30                | 30         | 1                | 5000            | 5                   |
-    | 40                | 20         | 1                | 5000            | 5                   |
-    | 50                | 10         | 0.5              | 3500            | 3                   |
-    | 60                | 0          | 0                | 2000            | 1                   |
-    | 70                | -10        | 0                | 2000            | 1                   |
-    | 80                | -20        | 0                | 2000            | 1                   |
-    | 90                | -30        | 0                | 2000            | 1                   |
-    ------------------------------
-
-    Observations:
-    - The system operates at maximum fan speed and pump frequency when the current temperature is significantly below the target.
-    - As the temperature approaches the target, the control actions are reduced.
-    - Once the temperature meets or exceeds the target, both the fan and pump are set to their minimum values to avoid overshooting and maintain the desired temperature.
-    """
-
     delta = TARGET_TEMP - temp
     max_delta = 20
 
@@ -112,63 +91,64 @@ def control_air_and_fuel(temp):
         fuel_mosfet.off()
 
 
-# Initialize WiFi
-wlan = network.WLAN(network.STA_IF)
-wlan.active(True)
+if USE_WIFI:
+    # Initialize WiFi
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
 
 
-def connect_wifi():
-    if not wlan.isconnected():
-        print('Connecting to WiFi...')
-        wlan.connect(SSID, PASSWORD)
-        while not wlan.isconnected():
-            time.sleep(1)
-        print('WiFi connected!')
+    def connect_wifi():
+        if not wlan.isconnected():
+            print('Connecting to WiFi...')
+            wlan.connect(SSID, PASSWORD)
+            while not wlan.isconnected():
+                time.sleep(1)
+            print('WiFi connected!')
+
+if USE_MQTT:
+    mqtt_client = None
 
 
-mqtt_client = None
+    def connect_mqtt():
+        global mqtt_client
+        print("Connecting to MQTT...")
+        mqtt_client = MQTTClient(MQTT_CLIENT_ID, MQTT_SERVER)
+        mqtt_client.set_callback(mqtt_callback)
+        mqtt_client.connect()
+        mqtt_client.subscribe(SET_TEMP_TOPIC)
+        mqtt_client.subscribe(COMMAND_TOPIC)
+        print("Connected to MQTT!")
 
 
-def connect_mqtt():
-    global mqtt_client
-    print("Connecting to MQTT...")
-    mqtt_client = MQTTClient(MQTT_CLIENT_ID, MQTT_SERVER)
-    mqtt_client.set_callback(mqtt_callback)
-    mqtt_client.connect()
-    mqtt_client.subscribe(SET_TEMP_TOPIC)
-    mqtt_client.subscribe(COMMAND_TOPIC)
-    print("Connected to MQTT!")
+    def mqtt_callback(topic, msg):
+        global TARGET_TEMP
+        topic = topic.decode('utf-8')
+        msg = msg.decode('utf-8')
+
+        if topic == SET_TEMP_TOPIC:
+            TARGET_TEMP = float(msg)
+        elif topic == COMMAND_TOPIC:
+            if msg == "start":
+                start_up()
+            elif msg == "stop":
+                shut_down()
 
 
-def mqtt_callback(topic, msg):
-    global TARGET_TEMP
-    topic = topic.decode('utf-8')
-    msg = msg.decode('utf-8')
-
-    if topic == SET_TEMP_TOPIC:
-        TARGET_TEMP = float(msg)
-    elif topic == COMMAND_TOPIC:
-        if msg == "start":
-            start_up()
-        elif msg == "stop":
-            shut_down()
-
-
-def publish_sensor_values():
-    water_temp = read_water_temp()
-    exhaust_temp = read_exhaust_temp()
-    payload = {
-        "water_temp": water_temp,
-        "exhaust_temp": exhaust_temp
-    }
-    mqtt_client.publish(SENSOR_VALUES_TOPIC, str(payload))
+    def publish_sensor_values():
+        water_temp = read_water_temp()
+        exhaust_temp = read_exhaust_temp()
+        payload = {
+            "water_temp": water_temp,
+            "exhaust_temp": exhaust_temp
+        }
+        mqtt_client.publish(SENSOR_VALUES_TOPIC, str(payload))
 
 
 def start_up():
     water_mosfet.on()
     glow_mosfet.on()
     while read_exhaust_temp() < BURN_CHAMBER_SAFE_TEMP:
-        time.sleep(5)
+        time.sleep(5) #TODO REMOVE THIS
     glow_mosfet.off()
     air_mosfet.on()
     fuel_mosfet.on()
@@ -182,49 +162,55 @@ def shut_down():
     glow_mosfet.off()
     while read_exhaust_temp() > EXHAUST_SHUTDOWN_TEMP:
         air_mosfet.on()
-        time.sleep(5)
+        time.sleep(5) #TODO REMOVE THIS
     air_mosfet.off()
     water_mosfet.off()
 
 
 def main():
     system_running = False
-    connect_wifi()
-    connect_mqtt()
 
     while True:
-        try:
-            if not wlan.isconnected():
-                connect_wifi()
+        # Handle WiFi
+        if USE_WIFI:
+            try:
+                if not wlan.isconnected():
+                    connect_wifi()
+            except Exception as e:
+                print("Error with WiFi:", e)
 
-            mqtt_client.check_msg()
-            publish_sensor_values()
+        # Handle MQTT
+        if USE_MQTT:
+            try:
+                mqtt_client.check_msg()
+                publish_sensor_values()
+            except Exception as e:
+                print("Error with MQTT:", e)
+                try:
+                    connect_mqtt()
+                except Exception as e:
+                    print("Error reconnecting to MQTT:", e)
 
-            water_temp = read_water_temp()
-            exhaust_temp = read_exhaust_temp()
+        # Heater control logic (Always executed)
+        water_temp = read_water_temp()
+        exhaust_temp = read_exhaust_temp()
 
-            if exhaust_temp > EXHAUST_SAFE_TEMP and system_running:
-                shut_down()
-                system_running = False
+        if exhaust_temp > EXHAUST_SAFE_TEMP and system_running:
+            shut_down()
+            system_running = False
 
-            if switch_pin.value() == 0 and not system_running:  # Assuming active-low switch
-                start_up()
-                system_running = True
-            elif switch_pin.value() == 1 and system_running:
-                shut_down()
-                system_running = False
+        if switch_pin.value() == 0 and not system_running:  # Assuming active-low switch
+            start_up()
+            system_running = True
+        elif switch_pin.value() == 1 and system_running:
+            shut_down()
+            system_running = False
 
-            if system_running:
-                control_air_and_fuel(water_temp)
+        if system_running:
+            control_air_and_fuel(water_temp)
 
-            time.sleep(10)
+        # time.sleep(1)  # Optional delay to avoid overloading the system
 
-        except Exception as e:
-            print("Error:", e)
-            print("Attempting to reconnect...")
-            time.sleep(10)
-            connect_wifi()
-            connect_mqtt()
 
 
 if __name__ == "__main__":
