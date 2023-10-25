@@ -8,6 +8,7 @@ from onewire import OneWire
 # Initialize the WDT with a 10-second timeout
 wdt = machine.WDT(id=0, timeout=10000)  # 10 seconds
 
+
 # Function to get the reset reason
 def get_reset_reason():
     reset_reason = machine.reset_cause()
@@ -17,10 +18,11 @@ def get_reset_reason():
         print("Reboot was because of WDT!")
     return reset_reason
 
+
 # Check the boot reason right at the beginning
 boot_reason = get_reset_reason()
 
-### Configuration ###
+# Configuration #
 USE_WIFI = True
 USE_MQTT = True
 TARGET_TEMP = 60.0
@@ -51,9 +53,9 @@ SWITCH_PIN = 15
 
 # Initialize pins
 air_pwm = machine.PWM(machine.Pin(AIR_PIN))
-air_pwm.freq(1000) # Note, this has nothing to do with the duty cycle
-                   # but is the frequency it's pulsed. The duty cycle
-                   # will end up being the same
+air_pwm.freq(1000)  # Note, this has nothing to do with the duty cycle
+# but is the frequency it's pulsed. The duty cycle
+# will end up being the same
 fuel_mosfet = machine.Pin(FUEL_PIN, machine.Pin.OUT)
 glow_mosfet = machine.Pin(GLOW_PIN, machine.Pin.OUT)
 water_mosfet = machine.Pin(WATER_PIN, machine.Pin.OUT)
@@ -62,10 +64,12 @@ switch_pin = machine.Pin(SWITCH_PIN, machine.Pin.IN, machine.Pin.PULL_UP)
 # Initialize a Timer for the fuel pump pulsing
 fuel_timer = machine.Timer(0)
 
-def pulse_fuel(timer):
+
+def pulse_fuel():
     fuel_mosfet.on()
     time.sleep_ms(20)
     fuel_mosfet.off()
+
 
 # Initialize DS18B20 temperature sensors
 ow_water = OneWire(machine.Pin(WATER_TEMP_SENSOR_PIN))
@@ -73,17 +77,20 @@ ow_exhaust = OneWire(machine.Pin(EXHAUST_TEMP_SENSOR_PIN))
 temp_sensor_water = DS18X20(ow_water)
 temp_sensor_exhaust = DS18X20(ow_exhaust)
 
+
 def read_water_temp():
     roms = temp_sensor_water.scan()
     temp_sensor_water.convert_temp()
     time.sleep_ms(750)
     return temp_sensor_water.read_temp(roms[0])
 
+
 def read_exhaust_temp():
     roms = temp_sensor_exhaust.scan()
     temp_sensor_exhaust.convert_temp()
     time.sleep_ms(750)
     return temp_sensor_exhaust.read_temp(roms[0])
+
 
 def linear_interp(x, x0, x1, y0, y1):
     return y0 + (y1 - y0) * (x - x0) / (x1 - x0)
@@ -118,10 +125,12 @@ def control_air_and_fuel(temp):
     else:
         fuel_timer.deinit()
 
+
 # Initialize WiFi
 if USE_WIFI:
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
+
 
     def connect_wifi():
         if not wlan.isconnected():
@@ -134,6 +143,7 @@ if USE_WIFI:
 if USE_MQTT:
     mqtt_client = None
 
+
     def connect_mqtt():
         global mqtt_client
         print("Connecting to MQTT...")
@@ -143,6 +153,7 @@ if USE_MQTT:
         mqtt_client.subscribe(SET_TEMP_TOPIC)
         mqtt_client.subscribe(COMMAND_TOPIC)
         print("Connected to MQTT!")
+
 
     def mqtt_callback(topic, msg):
         global TARGET_TEMP
@@ -156,6 +167,7 @@ if USE_MQTT:
             elif msg == "stop":
                 shut_down()
 
+
     def publish_sensor_values():
         water_temp = read_water_temp()
         exhaust_temp = read_exhaust_temp()
@@ -165,6 +177,7 @@ if USE_MQTT:
         }
         mqtt_client.publish(SENSOR_VALUES_TOPIC, str(payload))
 
+
 def start_up():
     water_mosfet.on()
     glow_mosfet.on()
@@ -172,7 +185,8 @@ def start_up():
         time.sleep(5)
     glow_mosfet.off()
     air_pwm.duty(1023)
-    fuel_timer.init(period=int(1000/5), mode=machine.Timer.PERIODIC, callback=pulse_fuel)
+    fuel_timer.init(period=int(1000 / 5), mode=machine.Timer.PERIODIC, callback=pulse_fuel)
+
 
 def shut_down():
     fuel_timer.deinit()
@@ -185,6 +199,7 @@ def shut_down():
         time.sleep(5)
     air_pwm.duty(0)
     water_mosfet.off()
+
 
 def main():
     system_running = False
@@ -225,6 +240,7 @@ def main():
             control_air_and_fuel(water_temp)
 
         print("Reset/Boot Reason was:", boot_reason)
+
 
 if __name__ == "__main__":
     main()
