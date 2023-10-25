@@ -38,6 +38,14 @@ glow_mosfet = machine.Pin(GLOW_PIN, machine.Pin.OUT)
 water_mosfet = machine.Pin(WATER_PIN, machine.Pin.OUT)
 switch_pin = machine.Pin(SWITCH_PIN, machine.Pin.IN, machine.Pin.PULL_UP)
 
+# Initialize a Timer for the fuel pump pulsing
+fuel_timer = machine.Timer(0)
+
+def pulse_fuel(timer):
+    fuel_mosfet.on()
+    time.sleep_ms(20)
+    fuel_mosfet.off()
+
 if USE_WIFI:
     import network
 
@@ -79,10 +87,10 @@ def control_air_and_fuel(temp):
 
     air_pwm.duty(fan_duty)  # Set PWM duty cycle for the fan
 
-    if pump_frequency > 3:
-        fuel_mosfet.on()
+    if pump_frequency > 0:
+        fuel_timer.init(period=int(1000/pump_frequency), mode=machine.Timer.PERIODIC, callback=pulse_fuel)
     else:
-        fuel_mosfet.off()
+        fuel_timer.deinit()  # Stop the timer
 
 if USE_WIFI:
     # Initialize WiFi
@@ -139,10 +147,10 @@ def start_up():
         time.sleep(5)
     glow_mosfet.off()
     air_pwm.duty(1023)  # Set fan to full speed
-    fuel_mosfet.on()
+    fuel_timer.init(period=int(1000/5), mode=machine.Timer.PERIODIC, callback=pulse_fuel)  # Assuming a default 5Hz to start
 
 def shut_down():
-    fuel_mosfet.off()
+    fuel_timer.deinit()  # Stop pulsing the fuel pump
     air_pwm.duty(0)  # Turn off the fan
     glow_mosfet.on()
     time.sleep(60)
