@@ -51,7 +51,9 @@ SWITCH_PIN = 15
 
 # Initialize pins
 air_pwm = machine.PWM(machine.Pin(AIR_PIN))
-air_pwm.freq(1000)
+air_pwm.freq(1000) # Note, this has nothing to do with the duty cycle
+                   # but is the frequency it's pulsed. The duty cycle
+                   # will end up being the same
 fuel_mosfet = machine.Pin(FUEL_PIN, machine.Pin.OUT)
 glow_mosfet = machine.Pin(GLOW_PIN, machine.Pin.OUT)
 water_mosfet = machine.Pin(WATER_PIN, machine.Pin.OUT)
@@ -86,16 +88,33 @@ def read_exhaust_temp():
 def linear_interp(x, x0, x1, y0, y1):
     return y0 + (y1 - y0) * (x - x0) / (x1 - x0)
 
+
 def control_air_and_fuel(temp):
+    # Tuning parameters
+    max_delta = 20  # Maximum temperature difference considered for control
+    min_fan_percentage = 20  # Minimum fan speed in percentage
+    max_fan_percentage = 100  # Maximum fan speed in percentage
+    min_pump_frequency = 1  # Minimum pump frequency in Hz
+    max_pump_frequency = 5  # Maximum pump frequency in Hz
+
+    # Calculate the temperature difference from the target
     delta = TARGET_TEMP - temp
-    max_delta = 20
-    normalized_delta = min(max(delta / max_delta, 0), 1)
-    fan_duty = int(linear_interp(normalized_delta, 0, 1, 0, 1023))
-    pump_frequency = linear_interp(normalized_delta, 0, 1, 1, 5)
+
+    # Calculate fan speed as a percentage, within the range [min_fan_percentage, max_fan_percentage]
+    fan_speed_percentage = min(max((delta / max_delta) * 100, min_fan_percentage), max_fan_percentage)
+
+    # Convert the fan speed percentage to a PWM duty cycle between 0 and 1023
+    fan_duty = int((fan_speed_percentage / 100) * 1023)
+
+    # Calculate pump frequency, within the range [min_pump_frequency, max_pump_frequency]
+    pump_frequency = min(max((delta / max_delta) * max_pump_frequency, min_pump_frequency), max_pump_frequency)
+
+    # Update fan speed
     air_pwm.duty(fan_duty)
 
+    # Update fuel pump frequency
     if pump_frequency > 0:
-        fuel_timer.init(period=int(1000/pump_frequency), mode=machine.Timer.PERIODIC, callback=pulse_fuel)
+        fuel_timer.init(period=int(1000 / pump_frequency), mode=machine.Timer.PERIODIC, callback=pulse_fuel)
     else:
         fuel_timer.deinit()
 
