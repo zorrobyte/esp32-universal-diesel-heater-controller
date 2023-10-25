@@ -1,13 +1,32 @@
 import machine
 import time
+import network
+from umqtt.simple import MQTTClient
+from ds18x20 import DS18X20
+from onewire import OneWire
+
+# Initialize the WDT with a 10-second timeout
+wdt = machine.WDT(id=0, timeout=10000)  # 10 seconds
+
+# Function to get the reset reason
+def get_reset_reason():
+    reset_reason = machine.reset_cause()
+    if reset_reason == machine.PWRON_RESET:
+        print("Reboot was because of Power-On!")
+    elif reset_reason == machine.WDT_RESET:
+        print("Reboot was because of WDT!")
+    return reset_reason
+
+# Check the boot reason right at the beginning
+boot_reason = get_reset_reason()
 
 ### Configuration ###
 USE_WIFI = True
 USE_MQTT = True
-TARGET_TEMP = 60.0  # target temperature in Celsius
-EXHAUST_SAFE_TEMP = 120.0  # safety threshold in Celsius
-EXHAUST_SHUTDOWN_TEMP = 37.8  # Temp when the fan stops running during shutdown
-BURN_CHAMBER_SAFE_TEMP = 150.0  # Temperature to ensure stable combustion in Celsius
+TARGET_TEMP = 60.0
+EXHAUST_SAFE_TEMP = 120.0
+EXHAUST_SHUTDOWN_TEMP = 37.8
+BURN_CHAMBER_SAFE_TEMP = 150.0
 
 # WiFi Credentials
 SSID = "MYSSID"
@@ -28,18 +47,15 @@ WATER_PIN = 8
 WATER_TEMP_SENSOR_PIN = 12
 EXHAUST_TEMP_SENSOR_PIN = 13
 FAN_SPEED_SENSOR_PIN = 14
-SWITCH_PIN = 15  # Single pole switch pin
+SWITCH_PIN = 15
 
 # Initialize pins
 air_pwm = machine.PWM(machine.Pin(AIR_PIN))
-air_pwm.freq(1000)  # Set PWM frequency to 1kHz
+air_pwm.freq(1000)
 fuel_mosfet = machine.Pin(FUEL_PIN, machine.Pin.OUT)
 glow_mosfet = machine.Pin(GLOW_PIN, machine.Pin.OUT)
 water_mosfet = machine.Pin(WATER_PIN, machine.Pin.OUT)
 switch_pin = machine.Pin(SWITCH_PIN, machine.Pin.IN, machine.Pin.PULL_UP)
-
-# Initialize the WDT with a 10-second timeout
-wdt = machine.WDT(timeout=10000)  # 10 seconds
 
 # Initialize a Timer for the fuel pump pulsing
 fuel_timer = machine.Timer(0)
@@ -49,16 +65,7 @@ def pulse_fuel(timer):
     time.sleep_ms(20)
     fuel_mosfet.off()
 
-if USE_WIFI:
-    import network
-
-if USE_MQTT:
-    from umqtt.simple import MQTTClient
-
 # Initialize DS18B20 temperature sensors
-from ds18x20 import DS18X20
-from onewire import OneWire
-
 ow_water = OneWire(machine.Pin(WATER_TEMP_SENSOR_PIN))
 ow_exhaust = OneWire(machine.Pin(EXHAUST_TEMP_SENSOR_PIN))
 temp_sensor_water = DS18X20(ow_water)
@@ -82,21 +89,18 @@ def linear_interp(x, x0, x1, y0, y1):
 def control_air_and_fuel(temp):
     delta = TARGET_TEMP - temp
     max_delta = 20
-
     normalized_delta = min(max(delta / max_delta, 0), 1)
-
     fan_duty = int(linear_interp(normalized_delta, 0, 1, 0, 1023))
     pump_frequency = linear_interp(normalized_delta, 0, 1, 1, 5)
-
-    air_pwm.duty(fan_duty)  # Set PWM duty cycle for the fan
+    air_pwm.duty(fan_duty)
 
     if pump_frequency > 0:
         fuel_timer.init(period=int(1000/pump_frequency), mode=machine.Timer.PERIODIC, callback=pulse_fuel)
     else:
-        fuel_timer.deinit()  # Stop the timer
+        fuel_timer.deinit()
 
+# Initialize WiFi
 if USE_WIFI:
-    # Initialize WiFi
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
 
@@ -125,7 +129,6 @@ if USE_MQTT:
         global TARGET_TEMP
         topic = topic.decode('utf-8')
         msg = msg.decode('utf-8')
-
         if topic == SET_TEMP_TOPIC:
             TARGET_TEMP = float(msg)
         elif topic == COMMAND_TOPIC:
@@ -149,37 +152,32 @@ def start_up():
     while read_exhaust_temp() < BURN_CHAMBER_SAFE_TEMP:
         time.sleep(5)
     glow_mosfet.off()
-    air_pwm.duty(1023)  # Set fan to full speed
-    fuel_timer.init(period=int(1000/5), mode=machine.Timer.PERIODIC, callback=pulse_fuel)  # Assuming a default 5Hz to start
+    air_pwm.duty(1023)
+    fuel_timer.init(period=int(1000/5), mode=machine.Timer.PERIODIC, callback=pulse_fuel)
 
 def shut_down():
-    fuel_timer.deinit()  # Stop pulsing the fuel pump
-    air_pwm.duty(0)  # Turn off the fan
+    fuel_timer.deinit()
+    air_pwm.duty(0)
     glow_mosfet.on()
     time.sleep(60)
     glow_mosfet.off()
     while read_exhaust_temp() > EXHAUST_SHUTDOWN_TEMP:
-        air_pwm.duty(1023)  # Set fan to full speed
+        air_pwm.duty(1023)
         time.sleep(5)
-    air_pwm.duty(0)  # Turn off the fan
+    air_pwm.duty(0)
     water_mosfet.off()
 
 def main():
     system_running = False
 
     while True:
-        # Reset the WDT to prevent it from timing out
         wdt.feed()
-
-        # Handle WiFi
         if USE_WIFI:
             try:
                 if not wlan.isconnected():
                     connect_wifi()
             except Exception as e:
                 print("Error with WiFi:", e)
-
-        # Handle MQTT
         if USE_MQTT:
             try:
                 mqtt_client.check_msg()
@@ -191,15 +189,13 @@ def main():
                 except Exception as e:
                     print("Error reconnecting to MQTT:", e)
 
-        # Heater control logic (Always executed)
         water_temp = read_water_temp()
         exhaust_temp = read_exhaust_temp()
-
         if exhaust_temp > EXHAUST_SAFE_TEMP and system_running:
             shut_down()
             system_running = False
 
-        if switch_pin.value() == 0 and not system_running:  # Assuming active-low switch
+        if switch_pin.value() == 0 and not system_running:
             start_up()
             system_running = True
         elif switch_pin.value() == 1 and system_running:
@@ -209,7 +205,7 @@ def main():
         if system_running:
             control_air_and_fuel(water_temp)
 
-        # time.sleep(1)  # Optional delay to avoid overloading the system
+        print("Reset/Boot Reason was:", boot_reason)
 
 if __name__ == "__main__":
     main()
