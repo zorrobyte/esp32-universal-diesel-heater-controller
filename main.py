@@ -1,13 +1,10 @@
 import machine
 import time
-import network
-from umqtt.simple import MQTTClient
 from ds18x20 import DS18X20
 from onewire import OneWire
 
 # Initialize the WDT with a 10-second timeout
-wdt = machine.WDT(id=0, timeout=10000)  # 10 seconds
-
+#wdt = machine.WDT(id=0, timeout=60000)  # 60 seconds
 
 # Function to get the reset reason
 def get_reset_reason():
@@ -23,11 +20,11 @@ def get_reset_reason():
 boot_reason = get_reset_reason()
 
 # Configuration #
-USE_WIFI = True
-USE_MQTT = True
+USE_WIFI = False
+USE_MQTT = False
 TARGET_TEMP = 60.0
 EXHAUST_SAFE_TEMP = 120.0
-EXHAUST_SHUTDOWN_TEMP = 37.8
+EXHAUST_SHUTDOWN_TEMP = 40.0
 BURN_CHAMBER_SAFE_TEMP = 150.0
 
 # WiFi Credentials
@@ -41,18 +38,24 @@ SET_TEMP_TOPIC = "heater/set_temp"
 SENSOR_VALUES_TOPIC = "heater/sensor_values"
 COMMAND_TOPIC = "heater/command"
 
+if USE_WIFI:
+    import network
+
+if USE_MQTT:
+    from umqtt.simple import MQTTClient
+
 # Pin Definitions
-AIR_PIN = 5
-FUEL_PIN = 6
-GLOW_PIN = 7
-WATER_PIN = 8
-WATER_TEMP_SENSOR_PIN = 12
-EXHAUST_TEMP_SENSOR_PIN = 13
-FAN_SPEED_SENSOR_PIN = 14
-SWITCH_PIN = 15
+AIR_PIN = machine.Pin(23, machine.Pin.OUT)
+FUEL_PIN = machine.Pin(22, machine.Pin.OUT)
+GLOW_PIN = machine.Pin(21, machine.Pin.OUT)
+WATER_PIN = machine.Pin(19, machine.Pin.OUT)
+
+# Analog Input, Digital I/O
+FAN_SPEED_SENSOR_PIN = machine.Pin(32, machine.Pin.IN)  # You can change this to machine.Pin.OUT based on your use-case
+SWITCH_PIN = machine.Pin(33, machine.Pin.IN)  # Using internal pull-up
 
 # Initialize pins
-air_pwm = machine.PWM(machine.Pin(AIR_PIN))
+air_pwm = machine.PWM(AIR_PIN)
 air_pwm.freq(1000)  # Note, this has nothing to do with the duty cycle
 # but is the frequency it's pulsed. The duty cycle
 # will end up being the same
@@ -72,31 +75,45 @@ def pulse_fuel():
 
 
 # Initialize DS18B20 temperature sensors
-ow_water = OneWire(machine.Pin(WATER_TEMP_SENSOR_PIN))
-ow_exhaust = OneWire(machine.Pin(EXHAUST_TEMP_SENSOR_PIN))
+ow_water = OneWire(machine.Pin(18))
+ow_exhaust = OneWire(machine.Pin(14))
 temp_sensor_water = DS18X20(ow_water)
 temp_sensor_exhaust = DS18X20(ow_exhaust)
 
 
 def read_water_temp():
-    roms = temp_sensor_water.scan()
-    temp_sensor_water.convert_temp()
-    time.sleep_ms(750)
-    return temp_sensor_water.read_temp(roms[0])
-
+    try:
+        roms = temp_sensor_water.scan()
+        temp_sensor_water.convert_temp()
+        time.sleep_ms(750)
+        return temp_sensor_water.read_temp(roms[0])
+    except Exception as e:
+        #print("An error occurred while reading the water temperature sensor:", str(e))
+        return 90  # Return None or some default value
 
 def read_exhaust_temp():
-    roms = temp_sensor_exhaust.scan()
-    temp_sensor_exhaust.convert_temp()
-    time.sleep_ms(750)
-    return temp_sensor_exhaust.read_temp(roms[0])
+    try:
+        roms = temp_sensor_exhaust.scan()
+        temp_sensor_exhaust.convert_temp()
+        time.sleep_ms(750)
+        return temp_sensor_exhaust.read_temp(roms[0])
+    except Exception as e:
+        #print("An error occurred while reading the exhaust temperature sensor:", str(e))
+        return 100  # Return None or some default value
+
 
 
 def linear_interp(x, x0, x1, y0, y1):
     return y0 + (y1 - y0) * (x - x0) / (x1 - x0)
 
 
+# Initialize a counter variable outside of the function, so it retains its value between calls
+cycle_counter = 0
+
+
 def control_air_and_fuel(temp):
+    global cycle_counter  # Declare the counter as global so we can modify it
+
     # Tuning parameters
     max_delta = 20  # Maximum temperature difference considered for control
     min_fan_percentage = 20  # Minimum fan speed in percentage
@@ -125,6 +142,22 @@ def control_air_and_fuel(temp):
     else:
         fuel_timer.deinit()
 
+    # Increment the cycle counter
+    cycle_counter += 1
+
+    # Print information every 1000 cycles
+    if cycle_counter >= 1000:
+        print("========================================")
+        print("          SYSTEM STATUS                ")
+        print("========================================")
+        print(f"  Fan Speed: {fan_speed_percentage:>4}% (Duty Cycle: {fan_duty:>4})      ")
+        print(f"  Pump Frequency: {pump_frequency:>4} Hz                           ")
+        print(f"  Target Temp: {TARGET_TEMP:>6.2f}°C")
+        print(f"  Current Temp: {temp:>6.2f}°C")
+        print(f"  Temperature Delta: {delta:>6.2f}°C                            ")
+        print("========================================")
+
+        cycle_counter = 0  # Reset the counter
 
 # Initialize WiFi
 if USE_WIFI:
@@ -179,9 +212,11 @@ if USE_MQTT:
 
 
 def start_up():
+    print("Starting Up")
     water_mosfet.on()
     glow_mosfet.on()
     while read_exhaust_temp() < BURN_CHAMBER_SAFE_TEMP:
+        print("Waiting for startup, exhaust temp is:", read_exhaust_temp())
         time.sleep(5)
     glow_mosfet.off()
     air_pwm.duty(1023)
@@ -189,6 +224,7 @@ def start_up():
 
 
 def shut_down():
+    print("Shutting Down")
     fuel_timer.deinit()
     air_pwm.duty(0)
     glow_mosfet.on()
@@ -196,16 +232,17 @@ def shut_down():
     glow_mosfet.off()
     while read_exhaust_temp() > EXHAUST_SHUTDOWN_TEMP:
         air_pwm.duty(1023)
+        print("Waiting for cooldown, exhaust temp is:", read_exhaust_temp())
         time.sleep(5)
     air_pwm.duty(0)
     water_mosfet.off()
 
 
 def main():
-    system_running = False
+    system_running = True
 
     while True:
-        wdt.feed()
+        #wdt.feed()
         if USE_WIFI:
             try:
                 if not wlan.isconnected():
@@ -229,18 +266,18 @@ def main():
             shut_down()
             system_running = False
 
-        if switch_pin.value() == 0 and not system_running:
-            start_up()
-            system_running = True
-        elif switch_pin.value() == 1 and system_running:
-            shut_down()
-            system_running = False
+        #if switch_pin.value() == 0 and not system_running:
+        #    start_up()
+        #    system_running = True
+        #elif switch_pin.value() == 1 and system_running:
+        #    shut_down()
+        #    system_running = False
 
         if system_running:
             control_air_and_fuel(water_temp)
 
-        print("Reset/Boot Reason was:", boot_reason)
 
 
 if __name__ == "__main__":
+    print("Reset/Boot Reason was:", boot_reason)
     main()
