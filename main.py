@@ -38,6 +38,9 @@ glow_mosfet = machine.Pin(GLOW_PIN, machine.Pin.OUT)
 water_mosfet = machine.Pin(WATER_PIN, machine.Pin.OUT)
 switch_pin = machine.Pin(SWITCH_PIN, machine.Pin.IN, machine.Pin.PULL_UP)
 
+# Initialize the WDT with a 10-second timeout
+wdt = machine.WDT(timeout=10000)  # 10 seconds
+
 # Initialize a Timer for the fuel pump pulsing
 fuel_timer = machine.Timer(0)
 
@@ -165,6 +168,9 @@ def main():
     system_running = False
 
     while True:
+        # Reset the WDT to prevent it from timing out
+        wdt.feed()
+
         # Handle WiFi
         if USE_WIFI:
             try:
