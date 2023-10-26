@@ -277,7 +277,9 @@ def shut_down():
     if not startup_successful:
         print("Startup failed. Running fan at 100% for 30 seconds to purge.")
         air_pwm.duty(1023)  # 100% fan speed
+        glow_mosfet.on()  # Glow plug on to help purge
         time.sleep(30)  # Run the fan for 30 seconds
+        glow_mosfet.off()
 
     air_pwm.duty(1023)  # Set fan to 100% for normal shutdown as well
     glow_mosfet.on()  # Turn on the glow plug
