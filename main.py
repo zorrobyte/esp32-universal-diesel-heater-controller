@@ -350,13 +350,17 @@ def main():
 
         elif current_state == 'OFF':
             if current_switch_value == 0:
-                if startup_attempts < 3:
+                if output_temp > TARGET_TEMP + 10:
+                    current_state = 'STANDBY'
+                elif startup_attempts < 3:
                     current_state = 'STARTING'
                 else:
                     current_state = 'FAILURE'
             elif current_switch_value == 1:
                 startup_attempts = 0  # Reset startup_attempts when switch is off
                 current_state = 'OFF'
+                if IS_WATER_HEATER:
+                    water_mosfet.off()
 
         elif current_state == 'STARTING':
             start_up()
@@ -388,6 +392,9 @@ def main():
                 current_state = 'STARTING'
             elif current_switch_value == 1:
                 current_state = 'OFF'
+            else:
+                if IS_WATER_HEATER:
+                    water_mosfet.on()
 
         elif current_state == 'FAILURE':
             print("Max startup attempts reached. Switch off and on to restart.")
