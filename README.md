@@ -16,6 +16,9 @@ Always approach such systems with caution. Ensure you understand the code, the s
 
 Stay safe and think before you act.
 
+## Simulator
+You can fuck around with this project in the [ESP32 simulator](https://wokwi.com/projects/379601065746814977)
+
 ## Features:
 
 - **Remote control via MQTT**:
