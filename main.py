@@ -72,9 +72,12 @@ switch_pin = SWITCH_PIN
 # Constants
 BETA = 3950  # Beta value for the thermistor
 
-# Variable init
+# Global variables
 cycle_counter = 0
-pump_frequency = 0
+pump_frequency = 0  # Hz of the fuel pump, MUST be a global as it's ran in another thread
+startup_attempts = 0  # Counter for failed startup attempts
+startup_successful = False  # Flag to indicate if startup was successful
+failure_mode = False  # Flag to indicate if the system is in failure mode
 
 
 def pulse_fuel_thread():
@@ -203,7 +206,7 @@ if USE_MQTT:
 
 
 def start_up():
-    global pump_frequency
+    global pump_frequency, startup_successful, startup_attempts
     print("Starting Up")
     fan_speed_percentage = 20  # Initial fan speed
     fan_duty = int((fan_speed_percentage / 100) * 1023)
@@ -220,8 +223,8 @@ def start_up():
     pump_frequency = 1  # Initial pump frequency
     print(f"Fuel Pump: {pump_frequency} Hz")
 
-    # Waiting 15 seconds after initial fueling
-    time.sleep(15)
+    # Initially assume startup will fail
+    startup_successful = False
 
     for step in range(1, 6):  # 5 steps
         exhaust_temps = []
@@ -255,28 +258,40 @@ def start_up():
             # Temperature not increasing or decreasing, shut down
             print("Temperature not rising as expected. Stopping fueling.")
             shut_down()
+            startup_attempts += 1  # Increment the failed attempts counter
             return
+
     print("Startup Procedure Completed")
-
-
+    startup_successful = True  # Set the flag to true as startup was successful
+    startup_attempts = 0  # Reset the failed attempts counter
 
 
 def shut_down():
-    global pump_frequency
+    global pump_frequency, startup_successful
     print("Shutting Down")
-    pump_frequency = 0
+    pump_frequency = 0  # Stop the fuel pump
     if IS_WATER_HEATER:
-        water_mosfet.on()
-    air_pwm.duty(1023)
-    glow_mosfet.on()
+        water_mosfet.on()  # If it's a water heater, turn the water mosfet on
+
+    # If startup was not successful, run the fan at 100% for 30 seconds
+    if not startup_successful:
+        print("Startup failed. Running fan at 100% for 30 seconds to purge.")
+        air_pwm.duty(1023)  # 100% fan speed
+        time.sleep(30)  # Run the fan for 30 seconds
+
+    air_pwm.duty(1023)  # Set fan to 100% for normal shutdown as well
+    glow_mosfet.on()  # Turn on the glow plug
+
     while read_exhaust_temp() > EXHAUST_SHUTDOWN_TEMP:
-        air_pwm.duty(1023)
+        air_pwm.duty(1023)  # Maintain 100% fan speed
         print("Waiting for cooldown, exhaust temp is:", read_exhaust_temp())
-        time.sleep(5)
-    air_pwm.duty(0)
+        time.sleep(5)  # Wait for 5 seconds before checking again
+
+    air_pwm.duty(0)  # Turn off the fan
     if IS_WATER_HEATER:
-        water_mosfet.off()
-    glow_mosfet.off()
+        water_mosfet.off()  # Turn off the water mosfet if it's a water heater
+    glow_mosfet.off()  # Turn off the glow plug
+
     print("Finished Shutting Down")
 
 
@@ -292,18 +307,23 @@ def emergency_stop(reason):
         print(f"Emergency stop triggered due to {reason}. Please reboot to continue.")
         time.sleep(30)
 
+
 def main():
-    global pump_frequency
+    global pump_frequency, startup_attempts, startup_successful, failure_mode
     system_running = False
+    last_switch_value = switch_pin.value()  # To track changes in switch state
 
     while True:
+        # Uncomment the following line if you're using a Watchdog Timer
         # wdt.feed()
+
         if USE_WIFI:
             try:
                 if not wlan.isconnected():
                     connect_wifi()
             except Exception as e:
                 print("Error with WiFi:", e)
+
         if USE_MQTT:
             try:
                 mqtt_client.check_msg()
@@ -318,24 +338,45 @@ def main():
         output_temp = read_output_temp()
         exhaust_temp = read_exhaust_temp()
 
+        current_switch_value = switch_pin.value()
+
+        # Reset startup_attempts and failure_mode if switch is toggled off
+        if last_switch_value == 0 and current_switch_value == 1:
+            startup_attempts = 0
+            failure_mode = False
+
+        last_switch_value = current_switch_value  # Update last switch value
+
+        if failure_mode:
+            print("Max startup attempts reached. Going into failure mode.")
+            time.sleep(5)  # Delay to prevent too frequent messages
+            continue  # Skip the rest of the loop
+
         # Main control logic
         if exhaust_temp > EXHAUST_SAFE_TEMP:
             system_running = False
             emergency_stop("high exhaust temperature")
-
         if output_temp > TARGET_TEMP + 15:
             system_running = False
             emergency_stop("high output temperature")
 
-        if switch_pin.value() == 0 and not system_running:
-            start_up()
-            system_running = True
-        elif switch_pin.value() == 1 and system_running:
+        if current_switch_value == 0 and not system_running:
+            if startup_attempts < 3:  # Retry up to 3 times
+                start_up()
+                if startup_successful:  # Check if startup was successful
+                    system_running = True
+                else:
+                    print(f"Startup failed. Attempts: {startup_attempts}/3")
+            else:
+                failure_mode = True  # Set the system to failure mode
+
+        elif current_switch_value == 1 and system_running:
             shut_down()
             system_running = False
 
-        if system_running:
+        if system_running and startup_successful:
             control_air_and_fuel(output_temp, exhaust_temp)
+
 
 if __name__ == "__main__":
     print("Reset/Boot Reason was:", boot_reason)
