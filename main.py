@@ -81,6 +81,7 @@ failure_mode = False  # Flag to indicate if the system is in failure mode
 
 air_pwm.duty(0)  # Ensure the fan isn't initially on after init
 
+
 def pulse_fuel_thread():
     global pump_frequency
     while True:
@@ -269,7 +270,10 @@ def shut_down():
         print("Startup failed. Running fan at 100% for 30 seconds to purge.")
         air_pwm.duty(1023)  # 100% fan speed
         glow_mosfet.on()  # Glow plug on to help purge
-        time.sleep(30)  # Run the fan for 30 seconds
+        if IS_SIMULATION:
+            time.sleep(3)
+        else:
+            time.sleep(30)  # Run the fan for 30 seconds
         glow_mosfet.off()
 
     air_pwm.duty(1023)  # Set fan to 100% for normal shutdown as well
@@ -350,7 +354,9 @@ def main():
                     current_state = 'STARTING'
                 else:
                     current_state = 'FAILURE'
-            startup_attempts = 0  # Reset startup_attempts when switch is off
+            elif current_switch_value == 1:
+                startup_attempts = 0  # Reset startup_attempts when switch is off
+                current_state = 'OFF'
 
         elif current_state == 'STARTING':
             start_up()
@@ -398,8 +404,6 @@ def main():
         if emergency_reason:
             print(f"Emergency reason: {emergency_reason}")
         time.sleep(1)
-
-
 
 
 if __name__ == "__main__":
