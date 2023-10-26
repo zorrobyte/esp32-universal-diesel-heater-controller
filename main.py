@@ -205,7 +205,7 @@ if USE_MQTT:
 def start_up():
     global pump_frequency
     print("Starting Up")
-    fan_speed_percentage = 20
+    fan_speed_percentage = 20  # Initial fan speed
     fan_duty = int((fan_speed_percentage / 100) * 1023)
     air_pwm.duty(fan_duty)
     print(f"Fan: {fan_speed_percentage}%")
@@ -214,48 +214,51 @@ def start_up():
         water_mosfet.on()
     print("Glow plug: On")
     print("Wait 60 seconds for glow plug to heat up")
-    time.sleep(5)  # simulating a shorter time
-    exhaust_temp = read_exhaust_temp()
-    print(f"Exhaust Temp: {exhaust_temp}°C")
-    pump_frequency = 1
+    time.sleep(5)  # simulating a shorter time, TODO: change this to actual delay
+    initial_exhaust_temp = read_exhaust_temp()
+    print(f"Initial Exhaust Temp: {initial_exhaust_temp}°C")
+    pump_frequency = 1  # Initial pump frequency
     print(f"Fuel Pump: {pump_frequency} Hz")
-    new_exhaust_temp = read_exhaust_temp()
-    temp_change = new_exhaust_temp - exhaust_temp
-    print(f"Exhaust Temp Change: {temp_change}°C")
 
-    if temp_change >= 10:
-        fan_speed_percentage += 20
-        if fan_speed_percentage > 100:
-            fan_speed_percentage = 100
-        fan_duty = int((fan_speed_percentage / 100) * 1023)
-        air_pwm.duty(fan_duty)
-        pump_frequency += 1
-        if pump_frequency > 5:
-            pump_frequency = 5
-        print(f"Fan: {fan_speed_percentage}%, Fuel Pump: {pump_frequency} Hz")
-    time.sleep(2)
-    new_exhaust_temp = read_exhaust_temp()
-    print(f"Exhaust Temp: {new_exhaust_temp}°C")
+    # Waiting 15 seconds after initial fueling
+    time.sleep(15)
 
-    for _ in range(4):
-        temp_change = new_exhaust_temp - exhaust_temp
-        if temp_change >= 10:
+    for step in range(1, 6):  # 5 steps
+        exhaust_temps = []
+
+        # Record exhaust temperature over the next 20 seconds
+        for _ in range(20):
+            time.sleep(1)  # Wait for 1 second
+            exhaust_temps.append(read_exhaust_temp())
+
+        avg_exhaust_temp = sum(exhaust_temps) / len(exhaust_temps)
+        print(f"Average Exhaust Temp at step {step}: {avg_exhaust_temp}°C")
+
+        if avg_exhaust_temp > initial_exhaust_temp:
+            # Increase in temperature, increase fan and fuel frequency
             fan_speed_percentage += 20
             if fan_speed_percentage > 100:
                 fan_speed_percentage = 100
             fan_duty = int((fan_speed_percentage / 100) * 1023)
             air_pwm.duty(fan_duty)
+
             pump_frequency += 1
             if pump_frequency > 5:
                 pump_frequency = 5
-            print(f"Fan: {fan_speed_percentage}%, Fuel Pump: {pump_frequency} Hz")
 
-        time.sleep(2)
-        exhaust_temp = new_exhaust_temp
-        new_exhaust_temp = read_exhaust_temp()
-        print(f"Exhaust Temp: {new_exhaust_temp}°C")
+            print(
+                f"Step {step} successful. Increasing Fan to {fan_speed_percentage}% and Fuel Pump to {pump_frequency} Hz")
 
+            # Update the initial_exhaust_temp for next comparison
+            initial_exhaust_temp = avg_exhaust_temp
+        else:
+            # Temperature not increasing or decreasing, shut down
+            print("Temperature not rising as expected. Stopping fueling.")
+            shut_down()
+            return
     print("Startup Procedure Completed")
+
+
 
 
 def shut_down():
