@@ -21,15 +21,14 @@ boot_reason = get_reset_reason()
 # Configuration #
 USE_WIFI = False
 USE_MQTT = False
+IS_WATER_HEATER = False
 TARGET_TEMP = 60.0
 EXHAUST_SAFE_TEMP = 120.0
 EXHAUST_SHUTDOWN_TEMP = 40.0
 BURN_CHAMBER_SAFE_TEMP = 150.0
-
 # WiFi Credentials
 SSID = "MYSSID"
 PASSWORD = "PASSWORD"
-
 # MQTT Server
 MQTT_SERVER = "10.0.0.137"
 MQTT_CLIENT_ID = "esp32_heater"
@@ -47,12 +46,13 @@ if USE_MQTT:
 AIR_PIN = machine.Pin(23, machine.Pin.OUT)
 FUEL_PIN = machine.Pin(22, machine.Pin.OUT)
 GLOW_PIN = machine.Pin(21, machine.Pin.OUT)
-WATER_PIN = machine.Pin(19, machine.Pin.OUT)
+if IS_WATER_HEATER:
+    WATER_PIN = machine.Pin(19, machine.Pin.OUT)
 SWITCH_PIN = machine.Pin(33, machine.Pin.IN, machine.Pin.PULL_UP)
 
-# Initialize ADC for water and exhaust temperature
-WATER_TEMP_ADC = machine.ADC(machine.Pin(32))  # Changed to a valid ADC pin
-WATER_TEMP_ADC.atten(machine.ADC.ATTN_11DB)  # Corrected: Full range: 3.3v
+# Initialize ADC for output and exhaust temperature
+OUTPUT_TEMP_ADC = machine.ADC(machine.Pin(32))  # Changed to a valid ADC pin
+OUTPUT_TEMP_ADC.atten(machine.ADC.ATTN_11DB)  # Corrected: Full range: 3.3v
 EXHAUST_TEMP_ADC = machine.ADC(machine.Pin(34))  # Changed to a valid ADC pin
 EXHAUST_TEMP_ADC.atten(machine.ADC.ATTN_11DB)  # Corrected: Full range: 3.3v
 
@@ -63,7 +63,8 @@ air_pwm.freq(1000)
 # Initialize Fuel, Glow, and Water Mosfets
 fuel_mosfet = FUEL_PIN
 glow_mosfet = GLOW_PIN
-water_mosfet = WATER_PIN
+if IS_WATER_HEATER:
+    water_mosfet = WATER_PIN
 
 # Initialize Switch Pin
 switch_pin = SWITCH_PIN
@@ -95,15 +96,15 @@ def pulse_fuel_thread():
 _thread.start_new_thread(pulse_fuel_thread, ())
 
 
-def read_water_temp():
+def read_output_temp():
     try:
-        analog_value = WATER_TEMP_ADC.read()
+        analog_value = OUTPUT_TEMP_ADC.read()
         resistance = 1 / (4095.0 / analog_value - 1)
         celsius = 1 / (math.log(resistance) / BETA + 1.0 / 298.15) - 273.15
-        # print("Water Temperature in Celsius:", celsius)
+        # print("Output Temperature in Celsius:", celsius)
         return celsius
     except Exception as e:
-        print("An error occurred while reading the water temperature sensor:", str(e))
+        print("An error occurred while reading the output temperature sensor:", str(e))
         return 999
 
 
@@ -133,7 +134,8 @@ def control_air_and_fuel(temp, exhaust_temp):
     pump_frequency = min(max((delta / max_delta) * max_pump_frequency, min_pump_frequency), max_pump_frequency)
 
     air_pwm.duty(fan_duty)
-    water_mosfet.on()
+    if IS_WATER_HEATER:
+        water_mosfet.on()
     glow_mosfet.off()
 
     cycle_counter += 1
@@ -191,10 +193,10 @@ if USE_MQTT:
 
 
     def publish_sensor_values():
-        water_temp = read_water_temp()
+        output_temp = read_output_temp()
         exhaust_temp = read_exhaust_temp()
         payload = {
-            "water_temp": water_temp,
+            "output_temp": output_temp,
             "exhaust_temp": exhaust_temp
         }
         mqtt_client.publish(SENSOR_VALUES_TOPIC, str(payload))
@@ -208,7 +210,8 @@ def start_up():
     air_pwm.duty(fan_duty)
     print(f"Fan: {fan_speed_percentage}%")
     glow_mosfet.on()
-    water_mosfet.on()
+    if IS_WATER_HEATER:
+        water_mosfet.on()
     print("Glow plug: On")
     print("Wait 60 seconds for glow plug to heat up")
     time.sleep(5)  # simulating a shorter time
@@ -259,7 +262,8 @@ def shut_down():
     global pump_frequency
     print("Shutting Down")
     pump_frequency = 0
-    water_mosfet.on()
+    if IS_WATER_HEATER:
+        water_mosfet.on()
     air_pwm.duty(1023)
     glow_mosfet.on()
     while read_exhaust_temp() > EXHAUST_SHUTDOWN_TEMP:
@@ -267,7 +271,8 @@ def shut_down():
         print("Waiting for cooldown, exhaust temp is:", read_exhaust_temp())
         time.sleep(5)
     air_pwm.duty(0)
-    water_mosfet.off()
+    if IS_WATER_HEATER:
+        water_mosfet.off()
     glow_mosfet.off()
     print("Finished Shutting Down")
 
@@ -294,7 +299,7 @@ def main():
                 except Exception as e:
                     print("Error reconnecting to MQTT:", e)
 
-        water_temp = read_water_temp()
+        output_temp = read_output_temp()
         exhaust_temp = read_exhaust_temp()
         if exhaust_temp > EXHAUST_SAFE_TEMP and system_running:
             shut_down()
@@ -308,7 +313,7 @@ def main():
             system_running = False
 
         if system_running:
-            control_air_and_fuel(water_temp, exhaust_temp)
+            control_air_and_fuel(output_temp, exhaust_temp)
 
 
 if __name__ == "__main__":
