@@ -76,7 +76,7 @@ BETA = 3950  # Beta value for the thermistor
 cycle_counter = 0
 pump_frequency = 0  # Hz of the fuel pump, MUST be a global as it's ran in another thread
 startup_attempts = 0  # Counter for failed startup attempts
-startup_successful = False  # Flag to indicate if startup was successful
+startup_successful = True  # Flag to indicate if startup was successful
 failure_mode = False  # Flag to indicate if the system is in failure mode
 
 air_pwm.duty(0)  # Ensure the fan isn't initially on after init
@@ -314,6 +314,7 @@ def emergency_stop(reason):
 def main():
     global pump_frequency, startup_attempts, startup_successful, failure_mode
     system_running = False
+    system_standby = False
     last_switch_value = switch_pin.value()  # To track changes in switch state
 
     while True:
@@ -343,15 +344,16 @@ def main():
 
         current_switch_value = switch_pin.value()
 
-        # Reset startup_attempts and failure_mode if switch is toggled off
+        # Reset startup_attempts, standby, and failure_mode if switch is toggled off
         if last_switch_value == 0 and current_switch_value == 1:
             startup_attempts = 0
             failure_mode = False
+            system_standby = False
 
         last_switch_value = current_switch_value  # Update last switch value
 
         if failure_mode:
-            print("Max startup attempts reached. Going into failure mode.")
+            print("Max startup attempts reached. Switch off and on to restart.")
             time.sleep(5)  # Delay to prevent too frequent messages
             continue  # Skip the rest of the loop
 
@@ -359,11 +361,13 @@ def main():
         if exhaust_temp > EXHAUST_SAFE_TEMP:
             system_running = False
             emergency_stop("high exhaust temperature")
-        if output_temp > TARGET_TEMP + 15:
+        if current_switch_value == 0 and output_temp > TARGET_TEMP + 15:
+            print("Entering Standby due to high output temperature.")
+            shut_down()
             system_running = False
-            emergency_stop("high output temperature")
+            system_standby = True
 
-        if current_switch_value == 0 and not system_running:
+        if current_switch_value == 0 and not system_running and not system_standby:
             if startup_attempts < 3:  # Retry up to 3 times
                 start_up()
                 if startup_successful:  # Check if startup was successful
@@ -379,6 +383,7 @@ def main():
 
         if system_running and startup_successful:
             control_air_and_fuel(output_temp, exhaust_temp)
+
 
 
 if __name__ == "__main__":
