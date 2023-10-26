@@ -209,7 +209,7 @@ def start_up():
         water_mosfet.on()
     print("Glow plug: On")
     print("Wait 60 seconds for glow plug to heat up")
-    time.sleep(5)  # simulating a shorter time, TODO: change this to actual delay
+    time.sleep(60)  # TODO Find actual delay
     initial_exhaust_temp = read_exhaust_temp()
     print(f"Initial Exhaust Temp: {initial_exhaust_temp}°C")
     pump_frequency = 1  # Initial pump frequency
@@ -271,7 +271,7 @@ def shut_down():
         air_pwm.duty(1023)  # 100% fan speed
         glow_mosfet.on()  # Glow plug on to help purge
         if IS_SIMULATION:
-            time.sleep(3)
+            time.sleep(5)
         else:
             time.sleep(30)  # Run the fan for 30 seconds
         glow_mosfet.off()
