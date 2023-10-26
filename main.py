@@ -3,6 +3,7 @@ import math
 import time
 import _thread
 
+
 # Initialize the WDT with a 10-second timeout
 # wdt = machine.WDT(id=0, timeout=60000)  # 60 seconds
 
@@ -13,6 +14,7 @@ def get_reset_reason():
     elif reset_reason == machine.WDT_RESET:
         print("Reboot was because of WDT!")
     return reset_reason
+
 
 boot_reason = get_reset_reason()
 
@@ -54,7 +56,6 @@ WATER_TEMP_ADC.atten(machine.ADC.ATTN_11DB)  # Corrected: Full range: 3.3v
 EXHAUST_TEMP_ADC = machine.ADC(machine.Pin(34))  # Changed to a valid ADC pin
 EXHAUST_TEMP_ADC.atten(machine.ADC.ATTN_11DB)  # Corrected: Full range: 3.3v
 
-
 # Initialize PWM for air
 air_pwm = machine.PWM(AIR_PIN)
 air_pwm.freq(1000)
@@ -74,6 +75,7 @@ BETA = 3950  # Beta value for the thermistor
 cycle_counter = 0
 pump_frequency = 0
 
+
 def pulse_fuel_thread():
     global pump_frequency
     while True:
@@ -89,32 +91,35 @@ def pulse_fuel_thread():
         else:
             time.sleep(0.1)
 
+
 _thread.start_new_thread(pulse_fuel_thread, ())
+
 
 def read_water_temp():
     try:
         analog_value = WATER_TEMP_ADC.read()
         resistance = 1 / (4095.0 / analog_value - 1)
         celsius = 1 / (math.log(resistance) / BETA + 1.0 / 298.15) - 273.15
-        #print("Water Temperature in Celsius:", celsius)
+        # print("Water Temperature in Celsius:", celsius)
         return celsius
     except Exception as e:
         print("An error occurred while reading the water temperature sensor:", str(e))
         return 999
+
 
 def read_exhaust_temp():
     try:
         analog_value = EXHAUST_TEMP_ADC.read()
         resistance = 1 / (4095.0 / analog_value - 1)
         celsius = 1 / (math.log(resistance) / BETA + 1.0 / 298.15) - 273.15
-        #print("Exhaust Temperature in Celsius:", celsius)
+        # print("Exhaust Temperature in Celsius:", celsius)
         return celsius
     except Exception as e:
         print("An error occurred while reading the exhaust temperature sensor:", str(e))
         return 999
 
 
-def control_air_and_fuel(temp):
+def control_air_and_fuel(temp, exhaust_temp):
     global cycle_counter, pump_frequency
     max_delta = 20
     min_fan_percentage = 20
@@ -142,12 +147,15 @@ def control_air_and_fuel(temp):
         print(f"  Target Temp: {TARGET_TEMP:>6.2f}°C")
         print(f"  Current Temp: {temp:>6.2f}°C")
         print(f"  Temperature Delta: {delta:>6.2f}°C                            ")
+        print(f"  Exhaust Temp: {exhaust_temp:>6.2f}°C                            ")
         print("========================================")
         cycle_counter = 0
+
 
 if USE_WIFI:
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
+
 
     def connect_wifi():
         if not wlan.isconnected():
@@ -160,12 +168,14 @@ if USE_WIFI:
 if USE_MQTT:
     mqtt_client = None
 
+
     def connect_mqtt():
         global mqtt_client
         print("Connecting to MQTT...")
         mqtt_client = MQTTClient(MQTT_CLIENT_ID, MQTT_SERVER)
         mqtt_client.connect()
         print("Connected to MQTT!")
+
 
     def mqtt_callback(topic, msg):
         global TARGET_TEMP
@@ -179,6 +189,7 @@ if USE_MQTT:
             elif msg == "stop":
                 shut_down()
 
+
     def publish_sensor_values():
         water_temp = read_water_temp()
         exhaust_temp = read_exhaust_temp()
@@ -187,6 +198,7 @@ if USE_MQTT:
             "exhaust_temp": exhaust_temp
         }
         mqtt_client.publish(SENSOR_VALUES_TOPIC, str(payload))
+
 
 def start_up():
     global pump_frequency
@@ -242,6 +254,7 @@ def start_up():
 
     print("Startup Procedure Completed")
 
+
 def shut_down():
     global pump_frequency
     print("Shutting Down")
@@ -257,6 +270,7 @@ def shut_down():
     water_mosfet.off()
     glow_mosfet.off()
     print("Finished Shutting Down")
+
 
 def main():
     system_running = True
@@ -294,7 +308,8 @@ def main():
             system_running = False
 
         if system_running:
-            control_air_and_fuel(water_temp)
+            control_air_and_fuel(water_temp, exhaust_temp)
+
 
 if __name__ == "__main__":
     print("Reset/Boot Reason was:", boot_reason)
