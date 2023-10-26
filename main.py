@@ -19,7 +19,7 @@ def get_reset_reason():
 boot_reason = get_reset_reason()
 
 # Configuration #
-USE_WIFI = False
+USE_WIFI = False  # Both Wifi and MQTT not working at this time, hangs
 USE_MQTT = False
 IS_WATER_HEATER = True  # Set this to True if this is a Water/Coolant heater
 IS_SIMULATION = True  # If running simulation, skip some lengthy checks
