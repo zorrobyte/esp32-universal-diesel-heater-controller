@@ -1,8 +1,7 @@
 import machine
+import math
 import time
 import _thread
-from ds18x20 import DS18X20
-from onewire import OneWire
 
 # Initialize the WDT with a 10-second timeout
 # wdt = machine.WDT(id=0, timeout=60000)  # 60 seconds
@@ -47,18 +46,31 @@ AIR_PIN = machine.Pin(23, machine.Pin.OUT)
 FUEL_PIN = machine.Pin(22, machine.Pin.OUT)
 GLOW_PIN = machine.Pin(21, machine.Pin.OUT)
 WATER_PIN = machine.Pin(19, machine.Pin.OUT)
-FAN_SPEED_SENSOR_PIN = machine.Pin(32, machine.Pin.IN)
-SWITCH_PIN = machine.Pin(33, machine.Pin.IN)
+SWITCH_PIN = machine.Pin(33, machine.Pin.IN, machine.Pin.PULL_UP)
 
+# Initialize ADC for water and exhaust temperature
+WATER_TEMP_ADC = machine.ADC(machine.Pin(32))  # Changed to a valid ADC pin
+WATER_TEMP_ADC.atten(machine.ADC.ATTN_11DB)  # Corrected: Full range: 3.3v
+EXHAUST_TEMP_ADC = machine.ADC(machine.Pin(34))  # Changed to a valid ADC pin
+EXHAUST_TEMP_ADC.atten(machine.ADC.ATTN_11DB)  # Corrected: Full range: 3.3v
+
+
+# Initialize PWM for air
 air_pwm = machine.PWM(AIR_PIN)
-air_pwm.freq(1000) # Note, this has nothing to do with the duty cycle
-# but is the frequency it's pulsed. The duty cycle
-# will end up being the same
-fuel_mosfet = machine.Pin(FUEL_PIN, machine.Pin.OUT)
-glow_mosfet = machine.Pin(GLOW_PIN, machine.Pin.OUT)
-water_mosfet = machine.Pin(WATER_PIN, machine.Pin.OUT)
-switch_pin = machine.Pin(SWITCH_PIN, machine.Pin.IN, machine.Pin.PULL_UP)
+air_pwm.freq(1000)
 
+# Initialize Fuel, Glow, and Water Mosfets
+fuel_mosfet = FUEL_PIN
+glow_mosfet = GLOW_PIN
+water_mosfet = WATER_PIN
+
+# Initialize Switch Pin
+switch_pin = SWITCH_PIN
+
+# Constants
+BETA = 3950  # Beta value for the thermistor
+
+# Variable init
 cycle_counter = 0
 pump_frequency = 0
 
@@ -73,35 +85,34 @@ def pulse_fuel_thread():
             time.sleep(on_time)
             fuel_mosfet.off()
             time.sleep(off_time)
+            print("PULSE!", pump_frequency)
         else:
             time.sleep(0.1)
 
 _thread.start_new_thread(pulse_fuel_thread, ())
 
-ow_water = OneWire(machine.Pin(18))
-ow_exhaust = OneWire(machine.Pin(14))
-temp_sensor_water = DS18X20(ow_water)
-temp_sensor_exhaust = DS18X20(ow_exhaust)
-
 def read_water_temp():
     try:
-        roms = temp_sensor_water.scan()
-        temp_sensor_water.convert_temp()
-        time.sleep_ms(750)
-        return temp_sensor_water.read_temp(roms[0])
+        analog_value = WATER_TEMP_ADC.read()
+        resistance = 1 / (4095.0 / analog_value - 1)
+        celsius = 1 / (math.log(resistance) / BETA + 1.0 / 298.15) - 273.15
+        #print("Water Temperature in Celsius:", celsius)
+        return celsius
     except Exception as e:
-        # print("An error occurred while reading the air/water temperature sensor:", str(e))
-        return 90
+        print("An error occurred while reading the water temperature sensor:", str(e))
+        return 999
 
 def read_exhaust_temp():
     try:
-        roms = temp_sensor_exhaust.scan()
-        temp_sensor_exhaust.convert_temp()
-        time.sleep_ms(750)
-        return temp_sensor_exhaust.read_temp(roms[0])
+        analog_value = EXHAUST_TEMP_ADC.read()
+        resistance = 1 / (4095.0 / analog_value - 1)
+        celsius = 1 / (math.log(resistance) / BETA + 1.0 / 298.15) - 273.15
+        #print("Exhaust Temperature in Celsius:", celsius)
+        return celsius
     except Exception as e:
-        # print("An error occurred while reading the exhaust temperature sensor:", str(e))
-        return 100
+        print("An error occurred while reading the exhaust temperature sensor:", str(e))
+        return 999
+
 
 def control_air_and_fuel(temp):
     global cycle_counter, pump_frequency
@@ -117,6 +128,8 @@ def control_air_and_fuel(temp):
     pump_frequency = min(max((delta / max_delta) * max_pump_frequency, min_pump_frequency), max_pump_frequency)
 
     air_pwm.duty(fan_duty)
+    water_mosfet.on()
+    glow_mosfet.off()
 
     cycle_counter += 1
 
@@ -183,15 +196,14 @@ def start_up():
     air_pwm.duty(fan_duty)
     print(f"Fan: {fan_speed_percentage}%")
     glow_mosfet.on()
+    water_mosfet.on()
     print("Glow plug: On")
     print("Wait 60 seconds for glow plug to heat up")
-    time.sleep(60)
+    time.sleep(5)  # simulating a shorter time
     exhaust_temp = read_exhaust_temp()
     print(f"Exhaust Temp: {exhaust_temp}°C")
     pump_frequency = 1
     print(f"Fuel Pump: {pump_frequency} Hz")
-    print("Wait 20 seconds")
-    time.sleep(20)
     new_exhaust_temp = read_exhaust_temp()
     temp_change = new_exhaust_temp - exhaust_temp
     print(f"Exhaust Temp Change: {temp_change}°C")
@@ -206,7 +218,7 @@ def start_up():
         if pump_frequency > 5:
             pump_frequency = 5
         print(f"Fan: {fan_speed_percentage}%, Fuel Pump: {pump_frequency} Hz")
-    time.sleep(20)
+    time.sleep(2)
     new_exhaust_temp = read_exhaust_temp()
     print(f"Exhaust Temp: {new_exhaust_temp}°C")
 
@@ -223,7 +235,7 @@ def start_up():
                 pump_frequency = 5
             print(f"Fan: {fan_speed_percentage}%, Fuel Pump: {pump_frequency} Hz")
 
-        time.sleep(20)
+        time.sleep(2)
         exhaust_temp = new_exhaust_temp
         new_exhaust_temp = read_exhaust_temp()
         print(f"Exhaust Temp: {new_exhaust_temp}°C")
@@ -234,16 +246,17 @@ def shut_down():
     global pump_frequency
     print("Shutting Down")
     pump_frequency = 0
-    air_pwm.duty(0)
+    water_mosfet.on()
+    air_pwm.duty(1023)
     glow_mosfet.on()
-    time.sleep(60)
-    glow_mosfet.off()
     while read_exhaust_temp() > EXHAUST_SHUTDOWN_TEMP:
         air_pwm.duty(1023)
         print("Waiting for cooldown, exhaust temp is:", read_exhaust_temp())
         time.sleep(5)
     air_pwm.duty(0)
     water_mosfet.off()
+    glow_mosfet.off()
+    print("Finished Shutting Down")
 
 def main():
     system_running = True
@@ -273,12 +286,12 @@ def main():
             shut_down()
             system_running = False
 
-        # if switch_pin.value() == 0 and not system_running:
-        #    start_up()
-        #    system_running = True
-        # elif switch_pin.value() == 1 and system_running:
-        #    shut_down()
-        #    system_running = False
+        if switch_pin.value() == 0 and not system_running:
+            start_up()
+            system_running = True
+        elif switch_pin.value() == 1 and system_running:
+            shut_down()
+            system_running = False
 
         if system_running:
             control_air_and_fuel(water_temp)
