@@ -21,9 +21,9 @@ boot_reason = get_reset_reason()
 # Configuration #
 USE_WIFI = False
 USE_MQTT = False
-IS_WATER_HEATER = False
+IS_WATER_HEATER = True  # Set this to True if this is a Water/Coolant heater
 TARGET_TEMP = 60.0
-EXHAUST_SAFE_TEMP = 120.0
+EXHAUST_SAFE_TEMP = 75.0
 EXHAUST_SHUTDOWN_TEMP = 40.0
 BURN_CHAMBER_SAFE_TEMP = 150.0
 # WiFi Credentials
@@ -277,8 +277,21 @@ def shut_down():
     print("Finished Shutting Down")
 
 
+def emergency_stop(reason):
+    global pump_frequency
+    while True:
+        glow_mosfet.off()
+        fuel_mosfet.off()
+        air_pwm.duty(1023)
+        pump_frequency = 0
+        if IS_WATER_HEATER:
+            water_mosfet.on()
+        print(f"Emergency stop triggered due to {reason}. Please reboot to continue.")
+        time.sleep(30)
+
 def main():
-    system_running = True
+    global pump_frequency
+    system_running = False
 
     while True:
         # wdt.feed()
@@ -301,9 +314,15 @@ def main():
 
         output_temp = read_output_temp()
         exhaust_temp = read_exhaust_temp()
-        if exhaust_temp > EXHAUST_SAFE_TEMP and system_running:
-            shut_down()
+
+        # Main control logic
+        if exhaust_temp > EXHAUST_SAFE_TEMP:
             system_running = False
+            emergency_stop("high exhaust temperature")
+
+        if output_temp > TARGET_TEMP + 15:
+            system_running = False
+            emergency_stop("high output temperature")
 
         if switch_pin.value() == 0 and not system_running:
             start_up()
@@ -314,7 +333,6 @@ def main():
 
         if system_running:
             control_air_and_fuel(output_temp, exhaust_temp)
-
 
 if __name__ == "__main__":
     print("Reset/Boot Reason was:", boot_reason)
