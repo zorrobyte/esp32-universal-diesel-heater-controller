@@ -79,6 +79,7 @@ startup_attempts = 0  # Counter for failed startup attempts
 startup_successful = False  # Flag to indicate if startup was successful
 failure_mode = False  # Flag to indicate if the system is in failure mode
 
+air_pwm.duty(0)  # Ensure the fan isn't initially on after init
 
 def pulse_fuel_thread():
     global pump_frequency
