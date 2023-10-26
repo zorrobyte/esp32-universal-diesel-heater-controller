@@ -22,10 +22,11 @@ boot_reason = get_reset_reason()
 USE_WIFI = False
 USE_MQTT = False
 IS_WATER_HEATER = True  # Set this to True if this is a Water/Coolant heater
+IS_SIMULATION = True  # If running simulation, skip some lengthy checks
 TARGET_TEMP = 60.0
-EXHAUST_SAFE_TEMP = 75.0
+EXHAUST_SAFE_TEMP = 100  # TODO FIND REAL VALUE
+OUTPUT_SAFE_TEMP = 90  # TODO FIND REAL VALUE
 EXHAUST_SHUTDOWN_TEMP = 40.0
-BURN_CHAMBER_SAFE_TEMP = 150.0
 # WiFi Credentials
 SSID = "MYSSID"
 PASSWORD = "PASSWORD"
@@ -73,7 +74,6 @@ switch_pin = SWITCH_PIN
 BETA = 3950  # Beta value for the thermistor
 
 # Global variables
-cycle_counter = 0
 pump_frequency = 0  # Hz of the fuel pump, MUST be a global as it's ran in another thread
 startup_attempts = 0  # Counter for failed startup attempts
 startup_successful = True  # Flag to indicate if startup was successful
@@ -124,15 +124,16 @@ def read_exhaust_temp():
         return 999
 
 
-def control_air_and_fuel(temp, exhaust_temp):
-    global cycle_counter, pump_frequency
+def control_air_and_fuel(output_temp, exhaust_temp):
+    #  TODO IMPLEMENT FLAME OUT BASED ON exhaust_temp
+    global pump_frequency
     max_delta = 20
     min_fan_percentage = 20
     max_fan_percentage = 100
     min_pump_frequency = 1
     max_pump_frequency = 5
 
-    delta = TARGET_TEMP - temp
+    delta = TARGET_TEMP - output_temp
     fan_speed_percentage = min(max((delta / max_delta) * 100, min_fan_percentage), max_fan_percentage)
     fan_duty = int((fan_speed_percentage / 100) * 1023)
     pump_frequency = min(max((delta / max_delta) * max_pump_frequency, min_pump_frequency), max_pump_frequency)
@@ -141,21 +142,6 @@ def control_air_and_fuel(temp, exhaust_temp):
     if IS_WATER_HEATER:
         water_mosfet.on()
     glow_mosfet.off()
-
-    cycle_counter += 1
-
-    if cycle_counter >= 1000:
-        print("========================================")
-        print("          SYSTEM STATUS                ")
-        print("========================================")
-        print(f"  Fan Speed: {fan_speed_percentage:>4}% (Duty Cycle: {fan_duty:>4})      ")
-        print(f"  Pump Frequency: {pump_frequency:>4} Hz                           ")
-        print(f"  Target Temp: {TARGET_TEMP:>6.2f}°C")
-        print(f"  Current Temp: {temp:>6.2f}°C")
-        print(f"  Temperature Delta: {delta:>6.2f}°C                            ")
-        print(f"  Exhaust Temp: {exhaust_temp:>6.2f}°C                            ")
-        print("========================================")
-        cycle_counter = 0
 
 
 if USE_WIFI:
@@ -209,6 +195,10 @@ if USE_MQTT:
 def start_up():
     global pump_frequency, startup_successful, startup_attempts
     print("Starting Up")
+    if IS_SIMULATION:
+        print("Startup Procedure Completed")
+        startup_successful = True
+        return
     fan_speed_percentage = 20  # Initial fan speed
     fan_duty = int((fan_speed_percentage / 100) * 1023)
     air_pwm.duty(fan_duty)
@@ -312,77 +302,103 @@ def emergency_stop(reason):
 
 
 def main():
-    global pump_frequency, startup_attempts, startup_successful, failure_mode
-    system_running = False
-    system_standby = False
-    last_switch_value = switch_pin.value()  # To track changes in switch state
+    global pump_frequency, startup_attempts, startup_successful
+    states = ['INIT', 'OFF', 'STARTING', 'RUNNING', 'STANDBY', 'FAILURE', 'EMERGENCY_STOP']
+    current_state = 'INIT'
+    emergency_reason = None  # Variable to capture the reason for emergency stop
 
     while True:
         # Uncomment the following line if you're using a Watchdog Timer
         # wdt.feed()
 
-        if USE_WIFI:
+        # Handle WiFi and MQTT
+        if USE_WIFI and not wlan.isconnected():
             try:
-                if not wlan.isconnected():
-                    connect_wifi()
+                connect_wifi()
             except Exception as e:
-                print("Error with WiFi:", e)
+                print(f"Error with WiFi: {e}")
+                emergency_reason = "WiFi Connection Failure"
 
         if USE_MQTT:
             try:
                 mqtt_client.check_msg()
                 publish_sensor_values()
             except Exception as e:
-                print("Error with MQTT:", e)
+                print(f"Error with MQTT: {e}")
+                emergency_reason = "MQTT Connection Failure"
                 try:
                     connect_mqtt()
                 except Exception as e:
-                    print("Error reconnecting to MQTT:", e)
+                    print(f"Error reconnecting to MQTT: {e}")
 
         output_temp = read_output_temp()
         exhaust_temp = read_exhaust_temp()
-
         current_switch_value = switch_pin.value()
 
-        # Reset startup_attempts, standby, and failure_mode if switch is toggled off
-        if last_switch_value == 0 and current_switch_value == 1:
-            startup_attempts = 0
-            failure_mode = False
-            system_standby = False
-
-        last_switch_value = current_switch_value  # Update last switch value
-
-        if failure_mode:
-            print("Max startup attempts reached. Switch off and on to restart.")
-            time.sleep(5)  # Delay to prevent too frequent messages
-            continue  # Skip the rest of the loop
-
-        # Main control logic
-        if exhaust_temp > EXHAUST_SAFE_TEMP:
-            system_running = False
-            emergency_stop("high exhaust temperature")
-        if current_switch_value == 0 and output_temp > TARGET_TEMP + 15:
-            print("Entering Standby due to high output temperature.")
-            shut_down()
-            system_running = False
-            system_standby = True
-
-        if current_switch_value == 0 and not system_running and not system_standby:
-            if startup_attempts < 3:  # Retry up to 3 times
-                start_up()
-                if startup_successful:  # Check if startup was successful
-                    system_running = True
-                else:
-                    print(f"Startup failed. Attempts: {startup_attempts}/3")
+        # State transitions
+        if current_state == 'INIT':
+            reset_reason = get_reset_reason()
+            if reset_reason == 'Some Specific Reason':
+                emergency_reason = "Unusual Reset Reason"
+                current_state = 'EMERGENCY_STOP'
             else:
-                failure_mode = True  # Set the system to failure mode
+                current_state = 'OFF'
 
-        elif current_switch_value == 1 and system_running:
-            shut_down()
-            system_running = False
+        elif current_state == 'OFF':
+            if current_switch_value == 0:
+                if startup_attempts < 3:
+                    current_state = 'STARTING'
+                else:
+                    current_state = 'FAILURE'
+            startup_attempts = 0  # Reset startup_attempts when switch is off
 
-        if system_running and startup_successful:
-            control_air_and_fuel(output_temp, exhaust_temp)
+        elif current_state == 'STARTING':
+            start_up()
+            if startup_successful:
+                current_state = 'RUNNING'
+            else:
+                startup_attempts += 1
+                current_state = 'OFF'
+
+        elif current_state == 'RUNNING':
+            if exhaust_temp > EXHAUST_SAFE_TEMP:
+                emergency_reason = "High Exhaust Temperature"
+                current_state = 'EMERGENCY_STOP'
+            elif output_temp > OUTPUT_SAFE_TEMP:
+                emergency_reason = "High Output Temperature"
+                shut_down()
+                current_state = 'EMERGENCY_STOP'
+            elif output_temp > TARGET_TEMP + 10:
+                shut_down()
+                current_state = 'STANDBY'
+            elif current_switch_value == 1:
+                shut_down()
+                current_state = 'OFF'
+            else:
+                control_air_and_fuel(output_temp, exhaust_temp)
+
+        elif current_state == 'STANDBY':
+            if output_temp < TARGET_TEMP - 10:
+                current_state = 'STARTING'
+            elif current_switch_value == 1:
+                current_state = 'OFF'
+
+        elif current_state == 'FAILURE':
+            print("Max startup attempts reached. Switch off and on to restart.")
+            if current_switch_value == 1:
+                current_state = 'OFF'
+
+        elif current_state == 'EMERGENCY_STOP':
+            emergency_stop(emergency_reason)
+            if current_switch_value == 1:
+                current_state = 'OFF'
+                emergency_reason = None
+
+        print(f"Current state: {current_state}")
+        if emergency_reason:
+            print(f"Emergency reason: {emergency_reason}")
+        time.sleep(1)
+
 
 
 
