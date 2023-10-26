@@ -23,6 +23,8 @@ USE_WIFI = False  # Both Wifi and MQTT not working at this time, hangs
 USE_MQTT = False
 IS_WATER_HEATER = True  # Set this to True if this is a Water/Coolant heater
 IS_SIMULATION = True  # If running simulation, skip some lengthy checks
+# Simulation is here https://wokwi.com/projects/379601065746814977
+# Mess with the switches and temp sensors once you hit play
 TARGET_TEMP = 60.0
 EXHAUST_SAFE_TEMP = 100  # TODO FIND REAL VALUE
 OUTPUT_SAFE_TEMP = 90  # TODO FIND REAL VALUE
