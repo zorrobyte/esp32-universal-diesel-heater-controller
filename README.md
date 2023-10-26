@@ -18,6 +18,8 @@ Stay safe and think before you act.
 
 ## Simulator
 You can fuck around with this project in the [ESP32 simulator](https://wokwi.com/projects/379601065746814977)
+Press play then mess with the switches and temp sensors
+Toggle IS_SIMULATION False if you'd like and manually simulate startup of a diesel heater (hint, increase exhaust temp during startup between each step)
 
 ## Features:
 
