@@ -85,6 +85,8 @@ air_pwm.duty(0)  # Ensure the fan isn't initially on after init
 
 
 def pulse_fuel_thread():
+    #  TODO: Add some sort of heartbeat so if
+    # the main thread fucks off, the pump stops
     global pump_frequency
     while True:
         if pump_frequency > 0:
