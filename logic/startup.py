@@ -1,8 +1,6 @@
 import config
 import time
-import shutdown
-import tempSensors
-
+from logic import shutdown, tempSensors
 
 def start_up():
     print("Starting Up")

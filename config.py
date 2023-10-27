@@ -48,6 +48,9 @@ pump_frequency = 0  # Hz of the fuel pump, MUST be a global as it's ran in anoth
 startup_attempts = 0  # Counter for failed startup attempts
 startup_successful = True  # Flag to indicate if startup was successful
 current_state = 'INIT'  # State the control is in
+emergency_reason = None
+output_temp = None
+exhaust_temp = None
 
 # ┌─────────────────────┐
 # │  Pin Assignments    │

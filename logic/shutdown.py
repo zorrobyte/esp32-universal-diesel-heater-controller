@@ -1,8 +1,6 @@
 import config
 import time
-import main
-import tempSensors
-
+from logic import tempSensors
 
 def shut_down():
     print("Shutting Down")
