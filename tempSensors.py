@@ -18,7 +18,7 @@ def read_output_temp():
         # Convert temperature to Celsius
         celsius = temperature_k - 273.15
         if config.IS_SIMULATION:
-            if config.current_state == 'STARTUP':
+            if config.current_state == 'STARTING':
                 return 10
             else:
                 return 60

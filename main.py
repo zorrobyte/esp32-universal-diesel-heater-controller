@@ -60,6 +60,7 @@ def emergency_stop(reason):
 
 def main():
     # states = ['INIT', 'OFF', 'STARTING', 'RUNNING', 'STANDBY', 'FAILURE', 'EMERGENCY_STOP']
+    # TODO add stopping state
     emergency_reason = None  # Variable to capture the reason for emergency stop
 
     while True:
