@@ -7,11 +7,11 @@ R0_NTC_50k = 50000.0  # 50k ohms
 T0_NTC_50k = 298.15  # 25C in Kelvin
 
 simulated_output_temp = 10  # Initial simulated output temperature
-output_temp_direction = 1  # 1 for increasing, -1 for decreasing
+simulated_temp_direction = 1  # 1 for increasing, -1 for decreasing
 
 
 def read_output_temp():
-    global simulated_output_temp, output_temp_direction
+    global simulated_output_temp, simulated_temp_direction
 
     if config.IS_SIMULATION:
         if config.current_state == 'STOPPING':
@@ -21,13 +21,13 @@ def read_output_temp():
             simulated_output_temp = 10
             return simulated_output_temp
         elif config.current_state == 'RUNNING' or config.current_state == 'STANDBY':
-            simulated_output_temp += output_temp_direction
+            simulated_output_temp += simulated_temp_direction
             if simulated_output_temp > 80:
                 simulated_output_temp = 80
-                output_temp_direction = -1  # Start decreasing
+                simulated_temp_direction = -1  # Start decreasing
             elif simulated_output_temp < 40:
                 simulated_output_temp = 40
-                output_temp_direction = 1  # Start increasing
+                simulated_temp_direction = 1  # Start increasing
             return simulated_output_temp
         else:
             return 60
@@ -51,19 +51,25 @@ R0_PTC_1K = 1000.0  # 1k ohms
 T0_PTC_1K = 298.15  # 25C in Kelvin
 
 simulated_exhaust_temp = 10  # Initial simulated exhaust temperature
+simulated_stopping_state = True
 
 
 def read_exhaust_temp():
-    global simulated_exhaust_temp
+    global simulated_exhaust_temp, simulated_stopping_state
 
     if config.IS_SIMULATION:
         if config.current_state == 'STOPPING':
+            if simulated_stopping_state:
+                simulated_exhaust_temp = 120  # Initialize to 120°C when first entering 'STOPPING' state
+                simulated_stopping_state = False  # Reset the flag
             simulated_exhaust_temp = max(20, simulated_exhaust_temp - 1)
             return simulated_exhaust_temp
         elif config.current_state == 'STARTING':
+            simulated_stopping_state = True  # Reset the flag for the next 'STOPPING' state
             simulated_exhaust_temp += 1
             return simulated_exhaust_temp
         elif config.current_state == 'OFF':
+            simulated_stopping_state = True  # Reset the flag for the next 'STOPPING' state
             simulated_exhaust_temp = 10
             return simulated_exhaust_temp
         else:

@@ -62,6 +62,7 @@ def standby(output_temp, current_switch_value):
     elif current_switch_value == 1:
         return 'OFF'
     else:
+        shutdown.shut_down()
         if config.IS_WATER_HEATER:
             config.WATER_PIN.on()
         if config.HAS_SECOND_PUMP:

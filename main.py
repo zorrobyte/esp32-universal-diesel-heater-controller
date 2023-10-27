@@ -62,7 +62,7 @@ def main():
             config.current_state = states.starting()
 
         elif config.current_state == 'RUNNING':
-            config.current_state, emergency_reason = states.running(current_switch_value, exhaust_temp, config.output_temp)
+            config.current_state, emergency_reason = states.running(current_switch_value, config.exhaust_temp, config.output_temp)
 
         elif config.current_state == 'STOPPING':
             config.current_state, emergency_reason = states.stopping()

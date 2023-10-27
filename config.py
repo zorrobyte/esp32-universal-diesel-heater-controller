@@ -56,14 +56,18 @@ exhaust_temp = None
 # │  Pin Assignments    │
 # └─────────────────────┘
 GLOW_PIN = machine.Pin(21, machine.Pin.OUT)  # K1 Relay
+GLOW_PIN.off()
 if IS_WATER_HEATER:
     WATER_PIN = machine.Pin(19, machine.Pin.OUT)  # K2 Relay
+    WATER_PIN.off()
 if HAS_SECOND_PUMP:
     WATER_SECONDARY_PIN = machine.Pin(18, machine.Pin.OUT)  # K3 Relay
+    WATER_SECONDARY_PIN.off()
 
 # Pin Definitions
 AIR_PIN = machine.Pin(23, machine.Pin.OUT)
 FUEL_PIN = machine.Pin(5, machine.Pin.OUT)  # K4 Relay
+FUEL_PIN.off()
 SWITCH_PIN = machine.Pin(33, machine.Pin.IN, machine.Pin.PULL_UP)
 
 # Initialize ADC for output and exhaust temperature
