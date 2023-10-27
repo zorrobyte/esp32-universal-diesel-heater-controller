@@ -2,11 +2,11 @@ import machine
 import time
 import _thread
 import config
-import networking
-import startup
-import shutdown
 import tempSensors
+import shutdown
 import control
+import startup
+import networking
 
 
 # Initialize the WDT with a 10-second timeout

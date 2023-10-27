@@ -1,6 +1,7 @@
 import config
 import time
 import main
+import tempSensors
 
 
 def shut_down():
@@ -25,9 +26,9 @@ def shut_down():
     config.air_pwm.duty(1023)  # Set fan to 100% for normal shutdown as well
     config.GLOW_PIN.on()  # Turn on the glow plug
 
-    while main.read_exhaust_temp() > config.EXHAUST_SHUTDOWN_TEMP:
+    while tempSensors.read_exhaust_temp() > config.EXHAUST_SHUTDOWN_TEMP:
         config.air_pwm.duty(1023)  # Maintain 100% fan speed
-        print("Waiting for cooldown, exhaust temp is:", main.read_exhaust_temp())
+        print("Waiting for cooldown, exhaust temp is:", tempSensors.read_exhaust_temp())
         time.sleep(5)  # Wait for 5 seconds before checking again
 
     config.air_pwm.duty(0)  # Turn off the fan

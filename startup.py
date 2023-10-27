@@ -2,14 +2,11 @@ import main
 import config
 import time
 import shutdown
+import tempSensors
 
 
 def start_up():
     print("Starting Up")
-    if config.IS_SIMULATION:
-        print("Startup Procedure Completed")
-        config.startup_successful = True
-        return
     fan_speed_percentage = 20  # Initial fan speed
     fan_duty = int((fan_speed_percentage / 100) * 1023)
     config.air_pwm.duty(fan_duty)
@@ -22,7 +19,7 @@ def start_up():
     print("Glow plug: On")
     print("Wait 60 seconds for glow plug to heat up")
     time.sleep(60)  # TODO Find actual delay
-    initial_exhaust_temp = main.read_exhaust_temp()
+    initial_exhaust_temp = tempSensors.read_exhaust_temp()
     print(f"Initial Exhaust Temp: {initial_exhaust_temp}°C")
     pump_frequency = 1  # Initial pump frequency
     print(f"Fuel Pump: {pump_frequency} Hz")
@@ -36,7 +33,7 @@ def start_up():
         # Record exhaust temperature over the next 20 seconds
         for _ in range(20):
             time.sleep(1)  # Wait for 1 second
-            exhaust_temps.append(main.read_exhaust_temp())
+            exhaust_temps.append(tempSensors.read_exhaust_temp())
 
         avg_exhaust_temp = sum(exhaust_temps) / len(exhaust_temps)
         print(f"Average Exhaust Temp at step {step}: {avg_exhaust_temp}°C")
@@ -53,9 +50,7 @@ def start_up():
             if pump_frequency > 5:
                 pump_frequency = 5
 
-            print(
-                f"Step {step} successful. Increasing Fan to {fan_speed_percentage}% "
-                f"and Fuel Pump to {pump_frequency} Hz")
+            print(f"Step {step} successful. Increasing Fan to {fan_speed_percentage}% and Fuel Pump to {pump_frequency} Hz")
 
             # Update the initial_exhaust_temp for next comparison
             initial_exhaust_temp = avg_exhaust_temp
