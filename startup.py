@@ -1,4 +1,3 @@
-import main
 import config
 import time
 import shutdown
@@ -21,8 +20,8 @@ def start_up():
     time.sleep(60)  # TODO Find actual delay
     initial_exhaust_temp = tempSensors.read_exhaust_temp()
     print(f"Initial Exhaust Temp: {initial_exhaust_temp}°C")
-    pump_frequency = 1  # Initial pump frequency
-    print(f"Fuel Pump: {pump_frequency} Hz")
+    config.pump_frequency = 1  # Initial pump frequency
+    print(f"Fuel Pump: {config.pump_frequency} Hz")
 
     # Initially assume startup will fail
     config.startup_successful = False
@@ -46,11 +45,11 @@ def start_up():
             fan_duty = int((fan_speed_percentage / 100) * 1023)
             config.air_pwm.duty(fan_duty)
 
-            pump_frequency += 1
-            if pump_frequency > 5:
-                pump_frequency = 5
+            config.pump_frequency += 1
+            if config.pump_frequency > 5:
+                config.pump_frequency = 5
 
-            print(f"Step {step} successful. Increasing Fan to {fan_speed_percentage}% and Fuel Pump to {pump_frequency} Hz")
+            print(f"Step {step} successful. Increasing Fan to {fan_speed_percentage}% and Fuel Pump to {config.pump_frequency} Hz")
 
             # Update the initial_exhaust_temp for next comparison
             initial_exhaust_temp = avg_exhaust_temp
