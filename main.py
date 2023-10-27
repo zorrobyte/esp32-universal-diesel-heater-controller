@@ -68,7 +68,10 @@ def read_output_temp():
 
         # Convert temperature to Celsius
         celsius = temperature_k - 273.15
-        return celsius
+        if config.IS_SIMULATION:
+            return 60
+        else:
+            return celsius
     except Exception as e:
         print("An error occurred while reading the output temperature sensor:", str(e))
         return 999
@@ -90,7 +93,10 @@ def read_exhaust_temp():
 
         # Convert temperature to Celsius
         celsius = temperature_k - 273.15
-        return celsius
+        if config.IS_SIMULATION:
+            return 60
+        else:
+            return celsius
     except Exception as e:
         print("An error occurred while reading the exhaust temperature sensor:", str(e))
         return 999
