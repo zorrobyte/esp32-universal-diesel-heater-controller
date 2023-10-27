@@ -16,8 +16,8 @@ def start_up():
     if config.HAS_SECOND_PUMP:
         config.WATER_SECONDARY_PIN.on()
     print("Glow plug: On")
-    print("Wait 60 seconds for glow plug to heat up")
-    time.sleep(60)  # TODO Find actual delay
+    print("Wait 30 seconds for glow plug to heat up")
+    time.sleep(30)  # TODO Find actual delay
     initial_exhaust_temp = tempSensors.read_exhaust_temp()
     print(f"Initial Exhaust Temp: {initial_exhaust_temp}°C")
     config.pump_frequency = 1  # Initial pump frequency
