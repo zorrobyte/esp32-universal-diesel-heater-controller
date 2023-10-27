@@ -31,6 +31,8 @@ FUEL_PIN = machine.Pin(22, machine.Pin.OUT)
 GLOW_PIN = machine.Pin(21, machine.Pin.OUT)
 if config.IS_WATER_HEATER:
     WATER_PIN = machine.Pin(19, machine.Pin.OUT)
+if config.HAS_SECOND_PUMP:
+    WATER_SECONDARY_PIN = machine.Pin(20, machine.Pin.OUT)
 SWITCH_PIN = machine.Pin(33, machine.Pin.IN, machine.Pin.PULL_UP)
 
 # Initialize ADC for output and exhaust temperature
@@ -43,18 +45,6 @@ EXHAUST_TEMP_ADC.atten(machine.ADC.ATTN_11DB)  # Corrected: Full range: 3.3v
 air_pwm = machine.PWM(AIR_PIN)
 air_pwm.freq(1000)
 air_pwm.duty(0)  # Ensure the fan isn't initially on after init
-
-# Initialize Fuel, Glow, and Water Mosfets
-fuel_mosfet = FUEL_PIN
-glow_mosfet = GLOW_PIN
-if config.IS_WATER_HEATER:
-    water_mosfet = WATER_PIN
-
-# Initialize Switch Pin
-switch_pin = SWITCH_PIN
-
-# Constants
-BETA = 3950  # Beta value for the thermistor
 
 # Global variables
 pump_frequency = 0  # Hz of the fuel pump, MUST be a global as it's ran in another thread
@@ -72,9 +62,9 @@ def pulse_fuel_thread():
             period = 1.0 / pump_frequency
             config.PUMP_ON_TIME = 0.02
             off_time = period - config.PUMP_ON_TIME
-            fuel_mosfet.on()
+            FUEL_PIN.on()
             time.sleep(config.PUMP_ON_TIME)
-            fuel_mosfet.off()
+            FUEL_PIN.off()
             time.sleep(off_time)
             # print("PULSE!", pump_frequency, "Hz") #  uncomment if you want a debug when it pulses
         else:
@@ -83,25 +73,44 @@ def pulse_fuel_thread():
 
 _thread.start_new_thread(pulse_fuel_thread, ())
 
+# Constants for 50k NTC thermistor
+BETA_NTC_50k = 3950  # Placeholder value; you should calibrate this for more accuracy
+R0_NTC_50k = 50000.0  # 50k ohms
+T0_NTC_50k = 298.15  # 25C in Kelvin
+
 
 def read_output_temp():
     try:
         analog_value = OUTPUT_TEMP_ADC.read()
         resistance = 1 / (4095.0 / analog_value - 1)
-        celsius = 1 / (math.log(resistance) / BETA + 1.0 / 298.15) - 273.15
-        # print("Output Temperature in Celsius:", celsius)
+
+        # Calculate temperature using the simplified B parameter equation for NTC
+        temperature_k = 1 / (math.log(resistance / R0_NTC_50k) / BETA_NTC_50k + 1 / T0_NTC_50k)
+
+        # Convert temperature to Celsius
+        celsius = temperature_k - 273.15
         return celsius
     except Exception as e:
         print("An error occurred while reading the output temperature sensor:", str(e))
         return 999
 
 
+# Constants for 1K PTC thermistor (HCalory Coolant Heater)
+BETA_PTC_1K = 3000  # Placeholder value; you should calibrate this for more accuracy
+R0_PTC_1K = 1000.0  # 1k ohms
+T0_PTC_1K = 298.15  # 25C in Kelvin
+
+
 def read_exhaust_temp():
     try:
         analog_value = EXHAUST_TEMP_ADC.read()
         resistance = 1 / (4095.0 / analog_value - 1)
-        celsius = 1 / (math.log(resistance) / BETA + 1.0 / 298.15) - 273.15
-        # print("Exhaust Temperature in Celsius:", celsius)
+
+        # Calculate temperature using the simplified B parameter equation for PTC
+        temperature_k = 1 / (1 / T0_PTC_1K + (1 / BETA_PTC_1K) * math.log(resistance / R0_PTC_1K))
+
+        # Convert temperature to Celsius
+        celsius = temperature_k - 273.15
         return celsius
     except Exception as e:
         print("An error occurred while reading the exhaust temperature sensor:", str(e))
@@ -120,8 +129,10 @@ def control_air_and_fuel(output_temp, exhaust_temp):
 
     air_pwm.duty(fan_duty)
     if config.IS_WATER_HEATER:
-        water_mosfet.on()
-    glow_mosfet.off()
+        WATER_PIN.on()
+    if config.HAS_SECOND_PUMP:
+        WATER_SECONDARY_PIN.on()
+    GLOW_PIN.off()
 
 
 if config.USE_WIFI:
@@ -182,9 +193,11 @@ def start_up():
     fan_duty = int((fan_speed_percentage / 100) * 1023)
     air_pwm.duty(fan_duty)
     print(f"Fan: {fan_speed_percentage}%")
-    glow_mosfet.on()
+    GLOW_PIN.on()
     if config.IS_WATER_HEATER:
-        water_mosfet.on()
+        WATER_PIN.on()
+    if config.HAS_SECOND_PUMP:
+        WATER_SECONDARY_PIN.on()
     print("Glow plug: On")
     print("Wait 60 seconds for glow plug to heat up")
     time.sleep(60)  # TODO Find actual delay
@@ -241,21 +254,23 @@ def shut_down():
     print("Shutting Down")
     pump_frequency = 0  # Stop the fuel pump
     if config.IS_WATER_HEATER:
-        water_mosfet.on()  # If it's a water heater, turn the water mosfet on
+        WATER_PIN.on()  # If it's a water heater, turn the water mosfet on
+    if config.HAS_SECOND_PUMP:
+        WATER_SECONDARY_PIN.on()
 
     # If startup was not successful, run the fan at 100% for 30 seconds
     if not startup_successful:
         print("Startup failed. Running fan at 100% for 30 seconds to purge.")
         air_pwm.duty(1023)  # 100% fan speed
-        glow_mosfet.on()  # Glow plug on to help purge
+        GLOW_PIN.on()  # Glow plug on to help purge
         if config.IS_SIMULATION:
             time.sleep(5)
         else:
             time.sleep(30)  # Run the fan for 30 seconds
-        glow_mosfet.off()
+        GLOW_PIN.off()
 
     air_pwm.duty(1023)  # Set fan to 100% for normal shutdown as well
-    glow_mosfet.on()  # Turn on the glow plug
+    GLOW_PIN.on()  # Turn on the glow plug
 
     while read_exhaust_temp() > config.EXHAUST_SHUTDOWN_TEMP:
         air_pwm.duty(1023)  # Maintain 100% fan speed
@@ -264,8 +279,10 @@ def shut_down():
 
     air_pwm.duty(0)  # Turn off the fan
     if config.IS_WATER_HEATER:
-        water_mosfet.off()  # Turn off the water mosfet if it's a water heater
-    glow_mosfet.off()  # Turn off the glow plug
+        WATER_PIN.off()  # Turn off the water mosfet if it's a water heater
+    if config.HAS_SECOND_PUMP:
+        WATER_SECONDARY_PIN.off()
+    GLOW_PIN.off()  # Turn off the glow plug
 
     print("Finished Shutting Down")
 
@@ -273,19 +290,21 @@ def shut_down():
 def emergency_stop(reason):
     global pump_frequency
     while True:
-        glow_mosfet.off()
-        fuel_mosfet.off()
+        GLOW_PIN.off()
+        FUEL_PIN.off()
         air_pwm.duty(1023)
         pump_frequency = 0
         if config.IS_WATER_HEATER:
-            water_mosfet.on()
+            WATER_PIN.on()
+        if config.HAS_SECOND_PUMP:
+            WATER_SECONDARY_PIN.on()
         print(f"Emergency stop triggered due to {reason}. Please reboot to continue.")
         time.sleep(30)
 
 
 def main():
     global pump_frequency, startup_attempts, startup_successful
-    states = ['INIT', 'OFF', 'STARTING', 'RUNNING', 'STANDBY', 'FAILURE', 'EMERGENCY_STOP']
+    # states = ['INIT', 'OFF', 'STARTING', 'RUNNING', 'STANDBY', 'FAILURE', 'EMERGENCY_STOP']
     current_state = 'INIT'
     emergency_reason = None  # Variable to capture the reason for emergency stop
 
@@ -315,7 +334,7 @@ def main():
 
         output_temp = read_output_temp()
         exhaust_temp = read_exhaust_temp()
-        current_switch_value = switch_pin.value()
+        current_switch_value = SWITCH_PIN.value()
 
         # State transitions
         if current_state == 'INIT':
@@ -338,7 +357,9 @@ def main():
                 startup_attempts = 0  # Reset startup_attempts when switch is off
                 current_state = 'OFF'
                 if config.IS_WATER_HEATER:
-                    water_mosfet.off()
+                    WATER_PIN.off()
+                if config.HAS_SECOND_PUMP:
+                    WATER_SECONDARY_PIN.off()
 
         elif current_state == 'STARTING':
             start_up()
@@ -372,7 +393,9 @@ def main():
                 current_state = 'OFF'
             else:
                 if config.IS_WATER_HEATER:
-                    water_mosfet.on()
+                    WATER_PIN.on()
+                if config.HAS_SECOND_PUMP:
+                    WATER_SECONDARY_PIN.on()
 
         elif current_state == 'FAILURE':
             print("Max startup attempts reached. Switch off and on to restart.")
