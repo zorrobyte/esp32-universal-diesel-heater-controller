@@ -2,9 +2,11 @@ import machine
 import time
 import _thread
 import config
+import networking
 import startup
 import shutdown
 import tempSensors
+import control
 
 
 # Initialize the WDT with a 10-second timeout
@@ -20,12 +22,6 @@ def get_reset_reason():
 
 
 boot_reason = get_reset_reason()
-
-if config.USE_WIFI:
-    import network
-
-if config.USE_MQTT:
-    from umqtt.simple import MQTTClient
 
 
 def pulse_fuel_thread():
@@ -46,71 +42,6 @@ def pulse_fuel_thread():
 
 
 _thread.start_new_thread(pulse_fuel_thread, ())
-
-
-def control_air_and_fuel(output_temp, exhaust_temp):
-    #  TODO IMPLEMENT FLAME OUT BASED ON exhaust_temp
-    max_delta = 20
-
-    delta = config.TARGET_TEMP - output_temp
-    fan_speed_percentage = min(max((delta / max_delta) * 100, config.MIN_FAN_PERCENTAGE), config.MAX_FAN_PERCENTAGE)
-    fan_duty = int((fan_speed_percentage / 100) * 1023)
-    config.pump_frequency = min(max((delta / max_delta) * config.MAX_PUMP_FREQUENCY, config.MIN_PUMP_FREQUENCY),
-                                config.MAX_PUMP_FREQUENCY)
-
-    config.air_pwm.duty(fan_duty)
-    if config.IS_WATER_HEATER:
-        config.WATER_PIN.on()
-    if config.HAS_SECOND_PUMP:
-        config.WATER_SECONDARY_PIN.on()
-    config.GLOW_PIN.off()
-
-
-if config.USE_WIFI:
-    wlan = network.WLAN(network.STA_IF)
-    wlan.active(True)
-
-
-    def connect_wifi():
-        if not wlan.isconnected():
-            print('Connecting to WiFi...')
-            wlan.connect(config.SSID, config.PASSWORD)
-            while not wlan.isconnected():
-                time.sleep(1)
-            print('WiFi connected!')
-
-if config.USE_MQTT:
-    mqtt_client = None
-
-
-    def connect_mqtt():
-        global mqtt_client
-        print("Connecting to MQTT...")
-        mqtt_client = MQTTClient(config.MQTT_CLIENT_ID, config.MQTT_SERVER)
-        mqtt_client.connect()
-        print("Connected to MQTT!")
-
-
-    def mqtt_callback(topic, msg):
-        topic = topic.decode('utf-8')
-        msg = msg.decode('utf-8')
-        if topic == config.SET_TEMP_TOPIC:
-            config.TARGET_TEMP = float(msg)
-        elif topic == config.COMMAND_TOPIC:
-            if msg == "start":
-                startup.start_up()
-            elif msg == "stop":
-                shutdown.shut_down()
-
-
-    def publish_sensor_values():
-        output_temp = tempSensors.read_output_temp()
-        exhaust_temp = tempSensors.read_exhaust_temp()
-        payload = {
-            "output_temp": output_temp,
-            "exhaust_temp": exhaust_temp
-        }
-        mqtt_client.publish(config.SENSOR_VALUES_TOPIC, str(payload))
 
 
 def emergency_stop(reason):
@@ -136,25 +67,7 @@ def main():
         # Uncomment the following line if you're using a Watchdog Timer
         # wdt.feed()
 
-        # Handle WiFi and MQTT
-        if config.USE_WIFI and not wlan.isconnected():
-            try:
-                connect_wifi()
-            except Exception as e:
-                print(f"Error with WiFi: {e}")
-                emergency_reason = "WiFi Connection Failure"
-
-        if config.USE_MQTT:
-            try:
-                mqtt_client.check_msg()
-                publish_sensor_values()
-            except Exception as e:
-                print(f"Error with MQTT: {e}")
-                emergency_reason = "MQTT Connection Failure"
-                try:
-                    connect_mqtt()
-                except Exception as e:
-                    print(f"Error reconnecting to MQTT: {e}")
+        networking.run_networking()
 
         output_temp = tempSensors.read_output_temp()
         exhaust_temp = tempSensors.read_exhaust_temp()
@@ -208,7 +121,7 @@ def main():
                 shutdown.shut_down()
                 current_state = 'OFF'
             else:
-                control_air_and_fuel(output_temp, exhaust_temp)
+                control.control_air_and_fuel(output_temp, exhaust_temp)
 
         elif current_state == 'STANDBY':
             if output_temp < config.TARGET_TEMP - 10:
