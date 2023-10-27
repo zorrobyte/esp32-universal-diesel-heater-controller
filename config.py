@@ -7,7 +7,6 @@ USE_WIFI = False  # Use Wi-Fi (not functional yet)
 USE_MQTT = False  # Use MQTT (not functional yet)
 IS_WATER_HEATER = True  # True if controlling a Water/Coolant Heater
 HAS_SECOND_PUMP = True  # True if driving a second water pump
-IS_LILYGO_TRELAY_BOARD = True
 IS_SIMULATION = True  # True to run in simulation mode
 
 # ┌─────────────────────┐
@@ -53,36 +52,15 @@ current_state = 'INIT'  # State the control is in
 # ┌─────────────────────┐
 # │  Pin Assignments    │
 # └─────────────────────┘
-# Helper class for inverted relay control (Lilygo T-Relay board)
-if IS_LILYGO_TRELAY_BOARD:
-    class InvertedRelay:
-        def __init__(self, pin_number):
-            self.pin = machine.Pin(pin_number, machine.Pin.OUT)
-            self.on()  # Initialize to real world OFF state
-
-        def on(self):
-            self.pin.off()  # Inverted logic: OFF turns relay ON
-
-        def off(self):
-            self.pin.on()  # Inverted logic: ON turns relay OFF
-
-
-    # Initialize the relay pins
-    GLOW_PIN = InvertedRelay(22)  # Replace 22 with the GPIO pin you're using for the relay
-    if IS_WATER_HEATER:
-        WATER_PIN = InvertedRelay(23)
-    if HAS_SECOND_PUMP:
-        WATER_SECONDARY_PIN = InvertedRelay(21)
-else:
-    GLOW_PIN = machine.Pin(21, machine.Pin.OUT)
-    if IS_WATER_HEATER:
-        WATER_PIN = machine.Pin(19, machine.Pin.OUT)
-    if HAS_SECOND_PUMP:
-        WATER_SECONDARY_PIN = machine.Pin(20, machine.Pin.OUT)
+GLOW_PIN = machine.Pin(21, machine.Pin.OUT)  # K1 Relay
+if IS_WATER_HEATER:
+    WATER_PIN = machine.Pin(19, machine.Pin.OUT)  # K2 Relay
+if HAS_SECOND_PUMP:
+    WATER_SECONDARY_PIN = machine.Pin(18, machine.Pin.OUT)  # K3 Relay
 
 # Pin Definitions
 AIR_PIN = machine.Pin(23, machine.Pin.OUT)
-FUEL_PIN = machine.Pin(22, machine.Pin.OUT)
+FUEL_PIN = machine.Pin(5, machine.Pin.OUT)  # K4 Relay
 SWITCH_PIN = machine.Pin(33, machine.Pin.IN, machine.Pin.PULL_UP)
 
 # Initialize ADC for output and exhaust temperature

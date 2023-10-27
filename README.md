@@ -79,5 +79,3 @@ So many hobbiest software and hardware developers absolutely **RAGE** when their
 I spent countless hours designing and implementing a steering angle sensor for the Openpilot self driving community and never saw a dime out of it. Now that project and other hardware is being made in China and sold online, in people's cars. I'm genuinely flattered that I did something that people find useful and no amount of angst would have changed that outcome. If I make a good enough product, people will generally want to buy it from me anyway as most people want to support the creators and developers and if they don't, it's not like they would of bought it from me regardless (think how absurd it is for companies to report "losses" due to piracy, were these "customers" going to buy it at the end of the day)?
 
 So truly, do what the fuck you want. Sell it on Etsy, rename it and say it's yours. I truly don't care. It's just not on me if you burn your house/van/hicendia down or get sued. Otherwise, we'll continue to see awesome projects go closed source which hurts everybody.
-
-![WTFPL Image](./wtfpl.jpg)
