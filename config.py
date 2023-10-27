@@ -48,6 +48,7 @@ PUMP_ON_TIME = 0.02  # Pump on time per pulse (s)
 pump_frequency = 0  # Hz of the fuel pump, MUST be a global as it's ran in another thread
 startup_attempts = 0  # Counter for failed startup attempts
 startup_successful = True  # Flag to indicate if startup was successful
+current_state = 'INIT'  # State the control is in
 
 # ┌─────────────────────┐
 # │  Pin Assignments    │

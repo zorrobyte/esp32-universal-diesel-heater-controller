@@ -60,7 +60,6 @@ def emergency_stop(reason):
 
 def main():
     # states = ['INIT', 'OFF', 'STARTING', 'RUNNING', 'STANDBY', 'FAILURE', 'EMERGENCY_STOP']
-    current_state = 'INIT'
     emergency_reason = None  # Variable to capture the reason for emergency stop
 
     while True:
@@ -74,78 +73,78 @@ def main():
         current_switch_value = config.SWITCH_PIN.value()
 
         # State transitions
-        if current_state == 'INIT':
+        if config.current_state == 'INIT':
             reset_reason = get_reset_reason()
             if reset_reason == 'Some Specific Reason':
                 emergency_reason = "Unusual Reset Reason"
-                current_state = 'EMERGENCY_STOP'
+                config.current_state = 'EMERGENCY_STOP'
             else:
-                current_state = 'OFF'
+                config.current_state = 'OFF'
 
-        elif current_state == 'OFF':
+        elif config.current_state == 'OFF':
             if current_switch_value == 0:
                 if output_temp > config.TARGET_TEMP + 10:
-                    current_state = 'STANDBY'
+                    config.current_state = 'STANDBY'
                 elif config.startup_attempts < 3:
-                    current_state = 'STARTING'
+                    config.current_state = 'STARTING'
                 else:
-                    current_state = 'FAILURE'
+                    config.current_state = 'FAILURE'
             elif current_switch_value == 1:
                 config.startup_attempts = 0  # Reset config.startup_attempts when switch is off
-                current_state = 'OFF'
+                config.current_state = 'OFF'
                 if config.IS_WATER_HEATER:
                     config.WATER_PIN.off()
                 if config.HAS_SECOND_PUMP:
                     config.WATER_SECONDARY_PIN.off()
 
-        elif current_state == 'STARTING':
+        elif config.current_state == 'STARTING':
             startup.start_up()
             if config.startup_successful:
-                current_state = 'RUNNING'
+                config.current_state = 'RUNNING'
             else:
                 config.startup_attempts += 1
-                current_state = 'OFF'
+                config.current_state = 'OFF'
 
-        elif current_state == 'RUNNING':
+        elif config.current_state == 'RUNNING':
             if exhaust_temp > config.EXHAUST_SAFE_TEMP:
                 emergency_reason = "High Exhaust Temperature"
-                current_state = 'EMERGENCY_STOP'
+                config.current_state = 'EMERGENCY_STOP'
             elif output_temp > config.OUTPUT_SAFE_TEMP:
                 emergency_reason = "High Output Temperature"
                 shutdown.shut_down()
-                current_state = 'EMERGENCY_STOP'
+                config.current_state = 'EMERGENCY_STOP'
             elif output_temp > config.TARGET_TEMP + 10:
                 shutdown.shut_down()
-                current_state = 'STANDBY'
+                config.current_state = 'STANDBY'
             elif current_switch_value == 1:
                 shutdown.shut_down()
-                current_state = 'OFF'
+                config.current_state = 'OFF'
             else:
                 control.control_air_and_fuel(output_temp, exhaust_temp)
 
-        elif current_state == 'STANDBY':
+        elif config.current_state == 'STANDBY':
             if output_temp < config.TARGET_TEMP - 10:
-                current_state = 'STARTING'
+                config.current_state = 'STARTING'
             elif current_switch_value == 1:
-                current_state = 'OFF'
+                config.current_state = 'OFF'
             else:
                 if config.IS_WATER_HEATER:
                     config.WATER_PIN.on()
                 if config.HAS_SECOND_PUMP:
                     config.WATER_SECONDARY_PIN.on()
 
-        elif current_state == 'FAILURE':
+        elif config.current_state == 'FAILURE':
             print("Max startup attempts reached. Switch off and on to restart.")
             if current_switch_value == 1:
-                current_state = 'OFF'
+                config.current_state = 'OFF'
 
-        elif current_state == 'EMERGENCY_STOP':
+        elif config.current_state == 'EMERGENCY_STOP':
             emergency_stop(emergency_reason)
             if current_switch_value == 1:
-                current_state = 'OFF'
+                config.current_state = 'OFF'
                 emergency_reason = None
 
-        print(f"Current state: {current_state}")
+        print(f"Current state: {config.current_state}")
         if emergency_reason:
             print(f"Emergency reason: {emergency_reason}")
         time.sleep(1)
