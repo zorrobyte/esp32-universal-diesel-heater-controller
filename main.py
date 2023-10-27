@@ -3,6 +3,8 @@ import math
 import time
 import _thread
 import config
+import startup
+import shutdown
 
 
 # Initialize the WDT with a 10-second timeout
@@ -25,27 +27,20 @@ if config.USE_WIFI:
 if config.USE_MQTT:
     from umqtt.simple import MQTTClient
 
-# Global variables
-pump_frequency = 0  # Hz of the fuel pump, MUST be a global as it's ran in another thread
-startup_attempts = 0  # Counter for failed startup attempts
-startup_successful = True  # Flag to indicate if startup was successful
-failure_mode = False  # Flag to indicate if the system is in failure mode
-
 
 def pulse_fuel_thread():
     #  TODO: Add some sort of heartbeat so if
     # the main thread fucks off, the pump stops
-    global pump_frequency
     while True:
-        if pump_frequency > 0:
-            period = 1.0 / pump_frequency
+        if config.pump_frequency > 0:
+            period = 1.0 / config.pump_frequency
             config.PUMP_ON_TIME = 0.02
             off_time = period - config.PUMP_ON_TIME
             config.FUEL_PIN.on()
             time.sleep(config.PUMP_ON_TIME)
             config.FUEL_PIN.off()
             time.sleep(off_time)
-            # print("PULSE!", pump_frequency, "Hz") #  uncomment if you want a debug when it pulses
+            # print("PULSE!", config.pump_frequency, "Hz") #  uncomment if you want a debug when it pulses
         else:
             time.sleep(0.1)
 
@@ -104,13 +99,12 @@ def read_exhaust_temp():
 
 def control_air_and_fuel(output_temp, exhaust_temp):
     #  TODO IMPLEMENT FLAME OUT BASED ON exhaust_temp
-    global pump_frequency
     max_delta = 20
 
     delta = config.TARGET_TEMP - output_temp
     fan_speed_percentage = min(max((delta / max_delta) * 100, config.MIN_FAN_PERCENTAGE), config.MAX_FAN_PERCENTAGE)
     fan_duty = int((fan_speed_percentage / 100) * 1023)
-    pump_frequency = min(max((delta / max_delta) * config.MAX_PUMP_FREQUENCY, config.MIN_PUMP_FREQUENCY),
+    config.pump_frequency = min(max((delta / max_delta) * config.MAX_PUMP_FREQUENCY, config.MIN_PUMP_FREQUENCY),
                          config.MAX_PUMP_FREQUENCY)
 
     config.air_pwm.duty(fan_duty)
@@ -153,9 +147,9 @@ if config.USE_MQTT:
             config.TARGET_TEMP = float(msg)
         elif topic == config.COMMAND_TOPIC:
             if msg == "start":
-                start_up()
+                startup.start_up()
             elif msg == "stop":
-                shut_down()
+                shutdown.shut_down()
 
 
     def publish_sensor_values():
@@ -168,118 +162,12 @@ if config.USE_MQTT:
         mqtt_client.publish(config.SENSOR_VALUES_TOPIC, str(payload))
 
 
-def start_up():
-    global pump_frequency, startup_successful, startup_attempts
-    print("Starting Up")
-    if config.IS_SIMULATION:
-        print("Startup Procedure Completed")
-        startup_successful = True
-        return
-    fan_speed_percentage = 20  # Initial fan speed
-    fan_duty = int((fan_speed_percentage / 100) * 1023)
-    config.air_pwm.duty(fan_duty)
-    print(f"Fan: {fan_speed_percentage}%")
-    config.GLOW_PIN.on()
-    if config.IS_WATER_HEATER:
-        config.WATER_PIN.on()
-    if config.HAS_SECOND_PUMP:
-        config.WATER_SECONDARY_PIN.on()
-    print("Glow plug: On")
-    print("Wait 60 seconds for glow plug to heat up")
-    time.sleep(60)  # TODO Find actual delay
-    initial_exhaust_temp = read_exhaust_temp()
-    print(f"Initial Exhaust Temp: {initial_exhaust_temp}°C")
-    pump_frequency = 1  # Initial pump frequency
-    print(f"Fuel Pump: {pump_frequency} Hz")
-
-    # Initially assume startup will fail
-    startup_successful = False
-
-    for step in range(1, 6):  # 5 steps
-        exhaust_temps = []
-
-        # Record exhaust temperature over the next 20 seconds
-        for _ in range(20):
-            time.sleep(1)  # Wait for 1 second
-            exhaust_temps.append(read_exhaust_temp())
-
-        avg_exhaust_temp = sum(exhaust_temps) / len(exhaust_temps)
-        print(f"Average Exhaust Temp at step {step}: {avg_exhaust_temp}°C")
-
-        if avg_exhaust_temp > initial_exhaust_temp:
-            # Increase in temperature, increase fan and fuel frequency
-            fan_speed_percentage += 20
-            if fan_speed_percentage > 100:
-                fan_speed_percentage = 100
-            fan_duty = int((fan_speed_percentage / 100) * 1023)
-            config.air_pwm.duty(fan_duty)
-
-            pump_frequency += 1
-            if pump_frequency > 5:
-                pump_frequency = 5
-
-            print(
-                f"Step {step} successful. Increasing Fan to {fan_speed_percentage}% and Fuel Pump to {pump_frequency} Hz")
-
-            # Update the initial_exhaust_temp for next comparison
-            initial_exhaust_temp = avg_exhaust_temp
-        else:
-            # Temperature not increasing or decreasing, shut down
-            print("Temperature not rising as expected. Stopping fueling.")
-            shut_down()
-            startup_attempts += 1  # Increment the failed attempts counter
-            return
-
-    print("Startup Procedure Completed")
-    startup_successful = True  # Set the flag to true as startup was successful
-    startup_attempts = 0  # Reset the failed attempts counter
-
-
-def shut_down():
-    global pump_frequency, startup_successful
-    print("Shutting Down")
-    pump_frequency = 0  # Stop the fuel pump
-    if config.IS_WATER_HEATER:
-        config.WATER_PIN.on()  # If it's a water heater, turn the water mosfet on
-    if config.HAS_SECOND_PUMP:
-        config.WATER_SECONDARY_PIN.on()
-
-    # If startup was not successful, run the fan at 100% for 30 seconds
-    if not startup_successful:
-        print("Startup failed. Running fan at 100% for 30 seconds to purge.")
-        config.air_pwm.duty(1023)  # 100% fan speed
-        config.GLOW_PIN.on()  # Glow plug on to help purge
-        if config.IS_SIMULATION:
-            time.sleep(5)
-        else:
-            time.sleep(30)  # Run the fan for 30 seconds
-        config.GLOW_PIN.off()
-
-    config.air_pwm.duty(1023)  # Set fan to 100% for normal shutdown as well
-    config.GLOW_PIN.on()  # Turn on the glow plug
-
-    while read_exhaust_temp() > config.EXHAUST_SHUTDOWN_TEMP:
-        config.air_pwm.duty(1023)  # Maintain 100% fan speed
-        print("Waiting for cooldown, exhaust temp is:", read_exhaust_temp())
-        time.sleep(5)  # Wait for 5 seconds before checking again
-
-    config.air_pwm.duty(0)  # Turn off the fan
-    if config.IS_WATER_HEATER:
-        config.WATER_PIN.off()  # Turn off the water mosfet if it's a water heater
-    if config.HAS_SECOND_PUMP:
-        config.WATER_SECONDARY_PIN.off()
-    config.GLOW_PIN.off()  # Turn off the glow plug
-
-    print("Finished Shutting Down")
-
-
 def emergency_stop(reason):
-    global pump_frequency
     while True:
         config.GLOW_PIN.off()
         config.FUEL_PIN.off()
         config.air_pwm.duty(1023)
-        pump_frequency = 0
+        config.pump_frequency = 0
         if config.IS_WATER_HEATER:
             config.WATER_PIN.on()
         if config.HAS_SECOND_PUMP:
@@ -289,7 +177,6 @@ def emergency_stop(reason):
 
 
 def main():
-    global pump_frequency, startup_attempts, startup_successful
     # states = ['INIT', 'OFF', 'STARTING', 'RUNNING', 'STANDBY', 'FAILURE', 'EMERGENCY_STOP']
     current_state = 'INIT'
     emergency_reason = None  # Variable to capture the reason for emergency stop
@@ -335,12 +222,12 @@ def main():
             if current_switch_value == 0:
                 if output_temp > config.TARGET_TEMP + 10:
                     current_state = 'STANDBY'
-                elif startup_attempts < 3:
+                elif config.startup_attempts < 3:
                     current_state = 'STARTING'
                 else:
                     current_state = 'FAILURE'
             elif current_switch_value == 1:
-                startup_attempts = 0  # Reset startup_attempts when switch is off
+                config.startup_attempts = 0  # Reset config.startup_attempts when switch is off
                 current_state = 'OFF'
                 if config.IS_WATER_HEATER:
                     config.WATER_PIN.off()
@@ -348,11 +235,11 @@ def main():
                     config.WATER_SECONDARY_PIN.off()
 
         elif current_state == 'STARTING':
-            start_up()
-            if startup_successful:
+            startup.start_up()
+            if config.startup_successful:
                 current_state = 'RUNNING'
             else:
-                startup_attempts += 1
+                config.startup_attempts += 1
                 current_state = 'OFF'
 
         elif current_state == 'RUNNING':
@@ -361,13 +248,13 @@ def main():
                 current_state = 'EMERGENCY_STOP'
             elif output_temp > config.OUTPUT_SAFE_TEMP:
                 emergency_reason = "High Output Temperature"
-                shut_down()
+                shutdown.shut_down()
                 current_state = 'EMERGENCY_STOP'
             elif output_temp > config.TARGET_TEMP + 10:
-                shut_down()
+                shutdown.shut_down()
                 current_state = 'STANDBY'
             elif current_switch_value == 1:
-                shut_down()
+                shutdown.shut_down()
                 current_state = 'OFF'
             else:
                 control_air_and_fuel(output_temp, exhaust_temp)

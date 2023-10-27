@@ -43,6 +43,13 @@ MAX_PUMP_FREQUENCY = 5  # Max pump freq (Hz)
 PUMP_ON_TIME = 0.02  # Pump on time per pulse (s)
 
 # ┌─────────────────────┐
+# │  Global Variables   │
+# └─────────────────────┘
+pump_frequency = 0  # Hz of the fuel pump, MUST be a global as it's ran in another thread
+startup_attempts = 0  # Counter for failed startup attempts
+startup_successful = True  # Flag to indicate if startup was successful
+
+# ┌─────────────────────┐
 # │  Pin Assignments    │
 # └─────────────────────┘
 # Helper class for inverted relay control (Lilygo T-Relay board)
