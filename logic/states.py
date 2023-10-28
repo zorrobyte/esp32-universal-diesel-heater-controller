@@ -1,40 +1,74 @@
 import config
-import main
 from logic import startup, shutdown, control, emergencyStop
 
 
+def log(message, level=2):
+    if config.LOG_LEVEL >= level:
+        print(message)
+
+
+def handle_state(current_state, switch_value, exhaust_temp, output_temp):
+    emergency_reason = None
+    next_state = current_state  # Default to staying in the current state
+
+    if current_state == 'INIT':
+        next_state, emergency_reason = init()
+
+    elif current_state == 'OFF':
+        next_state, emergency_reason = off(switch_value)
+
+    elif current_state == 'STARTING':
+        next_state, emergency_reason = starting()
+
+    elif current_state == 'RUNNING':
+        next_state, emergency_reason = running(switch_value, exhaust_temp, output_temp)
+
+    elif current_state == 'STOPPING':
+        next_state, emergency_reason = stopping()
+
+    elif current_state == 'STANDBY':
+        next_state, emergency_reason = standby(output_temp, switch_value)
+
+    elif current_state == 'FAILURE':
+        next_state, emergency_reason = failure()
+
+    elif current_state == 'EMERGENCY_STOP':
+        next_state, emergency_reason = emergency_stop()
+
+    if current_state != next_state:
+        log(f"Transitioning from {current_state} to {next_state}", level=2)
+
+    return next_state, emergency_reason
+
+
 def init():
-    reset_reason = main.get_reset_reason()
-    if reset_reason == 'Some Specific Reason':
-        return 'EMERGENCY_STOP', "Unusual Reset Reason"
-    else:
-        return 'OFF', None
+    return 'OFF', None
 
 
 def off(current_switch_value):
     if current_switch_value == 0:
         if config.output_temp > config.TARGET_TEMP + 10:
-            return 'STANDBY'
+            return 'STANDBY', None
         elif config.startup_attempts < 3:
-            return 'STARTING'
+            return 'STARTING', None
         else:
-            return 'FAILURE'
+            return 'FAILURE', None
     elif current_switch_value == 1:
         config.startup_attempts = 0
         if config.IS_WATER_HEATER:
             config.WATER_PIN.off()
         if config.HAS_SECOND_PUMP:
             config.WATER_SECONDARY_PIN.off()
-        return 'OFF'
+        return 'OFF', None
 
 
 def starting():
     startup.start_up()
     if config.startup_successful:
-        return 'RUNNING'
+        return 'RUNNING', None
     else:
         config.startup_attempts += 1
-        return 'OFF'
+        return 'STOPPING', None
 
 
 def running(current_switch_value, exhaust_temp, output_temp):
@@ -54,23 +88,23 @@ def stopping():
 
 def standby(output_temp, current_switch_value):
     if output_temp < config.TARGET_TEMP - 10:
-        return 'STARTING'
+        return 'STARTING', None
     elif current_switch_value == 1:
-        return 'OFF'
+        return 'OFF', None
     else:
         shutdown.shut_down()
         if config.IS_WATER_HEATER:
             config.WATER_PIN.on()
         if config.HAS_SECOND_PUMP:
             config.WATER_SECONDARY_PIN.on()
-        return 'STANDBY'
+        return 'STANDBY', None
 
 
-def failure(current_switch_value):
+def failure():
     print("Max startup attempts reached. Switch off and on to restart.")
-    if current_switch_value == 1:
-        return 'OFF'
+    return 'OFF', None
 
 
 def emergency_stop():
     emergencyStop.emergency_stop(config.emergency_reason)
+    return 'EMERGENCY_STOP', config.emergency_reason

@@ -3,10 +3,8 @@ import time
 import main
 from logic import tempSensors
 
-
 def state_message(state, message):
-    print(f"[Currently in state: - {state}] {message}")
-
+    print(f"[Current Startup Procedure: - {state}] {message}")
 
 def start_up():
     state = "INIT_SYSTEM"
@@ -24,20 +22,18 @@ def start_up():
         config.heartbeat = current_time
         main.wdt.feed()
 
-        # Check if startup is taking too long
         if current_time - startup_start_time > startup_time_limit:
             state_message("TIMEOUT", "Startup took too long. Changing state to STOPPING.")
-            config.current_state = 'STOPPING'
-            config.startup_attempts += 1
+            config.startup_successful = False
             return
 
         if state == "INIT_SYSTEM":
             state_message(state, "Initializing system...")
+            config.startup_successful = False  # Assume startup will fail
             initial_exhaust_temp = tempSensors.read_exhaust_temp()
             if initial_exhaust_temp > 100:
                 state_message(state, "Initial exhaust temperature too high. Changing state to STOPPING.")
-                config.current_state = 'STOPPING'
-                config.startup_attempts += 1
+                config.startup_successful = False
                 return
             fan_duty = int((fan_speed_percentage / 100) * 1023)
             config.air_pwm.duty(fan_duty)
@@ -46,7 +42,7 @@ def start_up():
             state = "WAIT_GLOW_PLUG"
 
         elif state == "WAIT_GLOW_PLUG":
-            state_message(state, "Waiting for glow plug to heat up...")
+            #state_message(state, "Waiting for glow plug to heat up...")
             if current_time >= glow_plug_heat_up_end_time:
                 config.pump_frequency = 1
                 state_message(state, f"Fuel Pump: {config.pump_frequency} Hz")
