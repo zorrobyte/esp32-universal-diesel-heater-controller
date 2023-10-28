@@ -5,7 +5,7 @@ import config
 from logic import networking, tempSensors, states, emergencyStop
 
 # Initialize the WDT with a 10-second timeout
-wdt = machine.WDT(id=0, timeout=5000)  # 5 seconds
+wdt = machine.WDT(id=0, timeout=10000)  # 10 seconds
 
 
 def get_reset_reason():

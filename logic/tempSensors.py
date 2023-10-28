@@ -66,7 +66,7 @@ def read_exhaust_temp():
             return simulated_exhaust_temp
         elif config.current_state == 'STARTING':
             simulated_stopping_state = True  # Reset the flag for the next 'STOPPING' state
-            simulated_exhaust_temp += 1
+            simulated_exhaust_temp += 0.1
             return simulated_exhaust_temp
         elif config.current_state == 'OFF':
             simulated_stopping_state = True  # Reset the flag for the next 'STOPPING' state
