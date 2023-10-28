@@ -1,10 +1,6 @@
 import math
 import config
 
-# Initialize simulated variables
-simulated_output_temp = 20
-simulated_exhaust_temp = 20
-
 
 def log(message, level=2):
     if config.LOG_LEVEL >= level:
@@ -55,32 +51,10 @@ def read_temp(analog_value, sensor_type, sensor_beta):
 
 
 def read_output_temp():
-    global simulated_output_temp
-    if config.IS_SIMULATION:
-        # Simulation logic for output temperature
-        if config.current_state == 'RUNNING':
-            simulated_output_temp = min(simulated_output_temp + 1, config.TARGET_TEMP)
-        elif config.current_state in ['STOPPING', 'SHUTDOWN']:
-            simulated_output_temp = max(simulated_output_temp - 1, 20)
-        elif config.current_state == 'STARTUP':
-            simulated_output_temp = min(simulated_output_temp + 0.5, 30)
-        return simulated_output_temp
-    else:
-        analog_value = config.OUTPUT_TEMP_ADC.read()
-        return read_temp(analog_value, config.OUTPUT_SENSOR_TYPE, config.OUTPUT_SENSOR_BETA)
+    analog_value = config.OUTPUT_TEMP_ADC.read()
+    return read_temp(analog_value, config.OUTPUT_SENSOR_TYPE, config.OUTPUT_SENSOR_BETA)
 
 
 def read_exhaust_temp():
-    global simulated_exhaust_temp
-    if config.IS_SIMULATION:
-        # Simulation logic for exhaust temperature
-        if config.current_state == 'RUNNING':
-            simulated_exhaust_temp = min(simulated_exhaust_temp + 2, 120)
-        elif config.current_state in ['STOPPING', 'SHUTDOWN']:
-            simulated_exhaust_temp = max(simulated_exhaust_temp - 2, 20)
-        elif config.current_state == 'STARTUP':
-            simulated_exhaust_temp = min(simulated_exhaust_temp + 1, 50)
-        return simulated_exhaust_temp
-    else:
-        analog_value = config.EXHAUST_TEMP_ADC.read()
-        return read_temp(analog_value, config.EXHAUST_SENSOR_TYPE, config.EXHAUST_SENSOR_BETA)
+    analog_value = config.EXHAUST_TEMP_ADC.read()
+    return read_temp(analog_value, config.EXHAUST_SENSOR_TYPE, config.EXHAUST_SENSOR_BETA)

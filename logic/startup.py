@@ -3,8 +3,10 @@ import time
 import main
 from logic import tempSensors
 
+
 def state_message(state, message):
     print(f"[Current Startup Procedure: - {state}] {message}")
+
 
 def start_up():
     state = "INIT_SYSTEM"
@@ -42,7 +44,7 @@ def start_up():
             state = "WAIT_GLOW_PLUG"
 
         elif state == "WAIT_GLOW_PLUG":
-            #state_message(state, "Waiting for glow plug to heat up...")
+            # state_message(state, "Waiting for glow plug to heat up...")
             if current_time >= glow_plug_heat_up_end_time:
                 config.pump_frequency = 1
                 state_message(state, f"Fuel Pump: {config.pump_frequency} Hz")
@@ -70,7 +72,8 @@ def start_up():
                         fan_duty = int((fan_speed_percentage / 100) * 1023)
                         config.air_pwm.duty(fan_duty)
                         config.pump_frequency = min(config.pump_frequency + 1, 5)
-                        state_message(state, f"Step {step} successful. Fan: {fan_speed_percentage}%, Fuel Pump: {config.pump_frequency} Hz")
+                        state_message(state,
+                                      f"Step {step} successful. Fan: {fan_speed_percentage}%, Fuel Pump: {config.pump_frequency} Hz")
                         initial_exhaust_temp = avg_exhaust_temp
                         step += 1
 

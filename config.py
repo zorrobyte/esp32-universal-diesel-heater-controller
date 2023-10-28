@@ -8,7 +8,6 @@ USE_WIFI = False  # Use Wi-Fi (not functional yet)
 USE_MQTT = False  # Use MQTT (not functional yet)
 IS_WATER_HEATER = True  # True if controlling a Water/Coolant Heater
 HAS_SECOND_PUMP = True  # True if driving a second water pump
-IS_SIMULATION = True  # True to run in simulation mode
 
 # ┌─────────────────────┐
 # │  Safety Limits      │
