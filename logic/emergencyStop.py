@@ -1,8 +1,10 @@
 import config
+import main
 
 
 def emergency_stop(reason):
     while True:
+        main.wdt.feed()
         config.current_state = 'EMERGENCY_STOP'
         config.GLOW_PIN.off()
         config.FUEL_PIN.off()
