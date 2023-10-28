@@ -1,4 +1,5 @@
 import machine
+import time
 
 # ┌─────────────────────┐
 # │  General Settings   │
@@ -51,6 +52,7 @@ current_state = 'INIT'  # State the control is in
 emergency_reason = None
 output_temp = None
 exhaust_temp = None
+heartbeat = time.time()
 
 # ┌─────────────────────┐
 # │  Pin Assignments    │

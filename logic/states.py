@@ -40,10 +40,6 @@ def starting():
 def running(current_switch_value, exhaust_temp, output_temp):
     if current_switch_value == 1:
         return 'STOPPING', None
-    elif exhaust_temp > config.EXHAUST_SAFE_TEMP:
-        return 'EMERGENCY_STOP', "High Exhaust Temperature"
-    elif output_temp > config.OUTPUT_SAFE_TEMP:
-        return 'EMERGENCY_STOP', "High Output Temperature"
     elif output_temp > config.TARGET_TEMP + 10:
         return 'STANDBY', None
     else:
@@ -76,7 +72,5 @@ def failure(current_switch_value):
         return 'OFF'
 
 
-def emergency_stop(current_switch_value):
+def emergency_stop():
     emergencyStop.emergency_stop(config.emergency_reason)
-    if current_switch_value == 1:
-        return 'OFF', None

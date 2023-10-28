@@ -1,9 +1,9 @@
 import config
-import time
 
 
 def emergency_stop(reason):
     while True:
+        config.current_state = 'EMERGENCY_STOP'
         config.GLOW_PIN.off()
         config.FUEL_PIN.off()
         config.air_pwm.duty(1023)
@@ -13,4 +13,3 @@ def emergency_stop(reason):
         if config.HAS_SECOND_PUMP:
             config.WATER_SECONDARY_PIN.on()
         print(f"Emergency stop triggered due to {reason}. Please reboot to continue.")
-        time.sleep(30)
