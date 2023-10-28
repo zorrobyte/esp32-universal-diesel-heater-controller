@@ -2,128 +2,99 @@ import machine
 import time
 
 # ┌─────────────────────┐
-# │  General Settings   │
+# │ General Settings    │
 # └─────────────────────┘
-USE_WIFI = False  # Use Wi-Fi (not functional yet)
-USE_MQTT = False  # Use MQTT (not functional yet)
-IS_WATER_HEATER = True  # True if controlling a Water/Coolant Heater
-HAS_SECOND_PUMP = True  # True if driving a second water pump
+USE_WIFI = False  # Enable or disable Wi-Fi functionality (not yet implemented).
+USE_MQTT = False  # Enable or disable MQTT functionality (not yet implemented).
+IS_WATER_HEATER = True  # Set to True if this device is controlling a water or coolant heater.
+HAS_SECOND_PUMP = True  # Set to True if there is a secondary water pump in the system.
 
 # ┌─────────────────────┐
-# │  Safety Limits      │
+# │ Safety Limits       │
 # └─────────────────────┘
-EXHAUST_SAFE_TEMP = 160  # Max safe temp for exhaust (°C)
-OUTPUT_SAFE_TEMP = 90  # Max safe temp for output (°C)
-EXHAUST_SHUTDOWN_TEMP = 80.0  # Exhaust shutdown temp (°C)
+EXHAUST_SAFE_TEMP = 160  # Max safe temperature for exhaust in C.
+OUTPUT_SAFE_TEMP = 90  # Max safe temperature for output in C.
 
 # ┌─────────────────────┐
-# │  WiFi Settings      │
+# │ Sensor Settings     │
 # └─────────────────────┘
-SSID = "MYSSID"  # WiFi SSID
-PASSWORD = "PASSWORD"  # WiFi Password
-
-# ┌─────────────────────┐
-# │  MQTT Settings      │
-# └─────────────────────┘
-MQTT_SERVER = "10.0.0.137"  # MQTT Server IP
-MQTT_CLIENT_ID = "esp32_heater"  # MQTT Client ID
-SET_TEMP_TOPIC = "heater/set_temp"  # Topic for setting temp
-SENSOR_VALUES_TOPIC = "heater/sensor_values"  # Topic for sensor values
-COMMAND_TOPIC = "heater/command"  # Topic for commands
-
-# ┌─────────────────────┐
-# │  Sensor Settings    │
-# └─────────────────────┘
-
-# OUTPUT_SENSOR_TYPE: Specifies the type of thermistor used for measuring output temperature.
-# Available options: 'NTC_50k', 'NTC_10k', 'PTC_1k', 'PTC_500', 'PTC_100', 'PTC_2000'
-# Refer to your thermistor's datasheet to select the appropriate type.
+# Specify the type of thermistor used for measuring temperatures.
+# Available options: 'NTC_10k', 'NTC_50k', 'NTC_100k', 'PTC_500', 'PTC_1k', 'PTC_2.3k'
 OUTPUT_SENSOR_TYPE = 'NTC_50k'
-
-# OUTPUT_SENSOR_BETA: Specifies the BETA value for the output temperature sensor.
-# This value is specific to the thermistor and is often available in the datasheet.
-# It is used in temperature calculation and should be as accurate as possible for precise measurements.
-OUTPUT_SENSOR_BETA = 3950  # Customize the BETA value
-
-# EXHAUST_SENSOR_TYPE: Specifies the type of thermistor used for measuring exhaust temperature.
-# Available options: 'NTC_50k', 'NTC_10k', 'PTC_1k', 'PTC_500', 'PTC_100', 'PTC_2000'
-# Refer to your thermistor's datasheet to select the appropriate type.
+OUTPUT_SENSOR_BETA = 3950  # BETA value for the output temperature sensor, typically found in the datasheet.
 EXHAUST_SENSOR_TYPE = 'PTC_1k'
-
-# EXHAUST_SENSOR_BETA: Specifies the BETA value for the exhaust temperature sensor.
-# This value is specific to the thermistor and is often available in the datasheet.
-# It is used in temperature calculation and should be as accurate as possible for precise measurements.
-EXHAUST_SENSOR_BETA = 3000  # Customize the BETA value
+EXHAUST_SENSOR_BETA = 3000  # BETA value for the exhaust temperature sensor, typically found in the datasheet.
 
 # ┌─────────────────────┐
-# │  Device Control     │
+# │ Device Control      │
 # └─────────────────────┘
-TARGET_TEMP = 60.0  # Target temp (°C)
-MIN_FAN_PERCENTAGE = 20  # Min fan speed (%)
-MAX_FAN_PERCENTAGE = 100  # Max fan speed (%)
-MIN_PUMP_FREQUENCY = 1  # Min pump freq (Hz)
-MAX_PUMP_FREQUENCY = 5  # Max pump freq (Hz)
-PUMP_ON_TIME = 0.02  # Pump on time per pulse (s)
-FAN_MAX_DUTY = 1023  # Maximum PWM duty cycle for the fan, ranging from 0 to 1023
-CONTROL_MAX_DELTA = 20  # Max temperature delta for control logic
-EMERGENCY_STOP_TIMER = 600000  # Timer for emergency stop in milliseconds before reboot (10 minutes)
-
-
-# ┌─────────────────────┐
-# │  Startup Settings   │
-# └─────────────────────┘
-STARTUP_TIME_LIMIT = 300  # 5 minutes in seconds
-GLOW_PLUG_HEAT_UP_TIME = 60  # 1 minute in seconds
-INITIAL_FAN_SPEED_PERCENTAGE = 20  # Initial fan speed in percentage
+TARGET_TEMP = 60.0  # Target temperature to maintain in °C.
+MIN_FAN_PERCENTAGE = 20  # Minimum fan speed as a percentage of the maximum speed.
+MAX_FAN_PERCENTAGE = 100  # Maximum fan speed as a percentage of the maximum speed.
+MIN_PUMP_FREQUENCY = 1  # Minimum frequency of the water pump in Hz.
+MAX_PUMP_FREQUENCY = 5  # Maximum frequency of the water pump in Hz.
+PUMP_ON_TIME = 0.02  # Duration the pump is on during each pulse, in seconds.
+FAN_MAX_DUTY = 1023  # Maximum duty cycle for the fan's PWM signal.
+CONTROL_MAX_DELTA = 20  # Maximum temperature delta for control logic in °C.
+EMERGENCY_STOP_TIMER = 600000  # Time before an emergency stop triggers a system reboot, in milliseconds.
 
 # ┌─────────────────────┐
-# │   Shutdown Settings │
+# │ Startup Settings    │
 # └─────────────────────┘
-SHUTDOWN_TIME_LIMIT = 300  # 5 minutes in seconds
-COOLDOWN_MIN_TIME = 30  # 30 seconds
+STARTUP_TIME_LIMIT = 300  # Maximum time allowed for startup, in seconds.
+GLOW_PLUG_HEAT_UP_TIME = 60  # Time for the glow plug to heat up, in seconds.
+INITIAL_FAN_SPEED_PERCENTAGE = 20  # Initial fan speed as a percentage of the maximum speed.
 
 # ┌─────────────────────┐
-# │  Logging Level      │
+# │ Shutdown Settings   │
 # └─────────────────────┘
-LOG_LEVEL = 3  # 0: None, 1: Errors, 2: Info, 3: Debug
+SHUTDOWN_TIME_LIMIT = 300  # Maximum time allowed for shutdown, in seconds Exceeding this puts us in an EMERGENCY state.
+COOLDOWN_MIN_TIME = 30  # Minimum time for the system to cool down, in seconds, regardless of temperature.
+EXHAUST_SHUTDOWN_TEMP = 80.0  # Temperature at which we consider the heater cooled down in C.
 
 # ┌─────────────────────┐
-# │  Global Variables   │
+# │ Logging Level       │
 # └─────────────────────┘
-pump_frequency = 0  # Hz of the fuel pump, MUST be a global as it's ran in another thread
-startup_attempts = 0  # Counter for failed startup attempts
-startup_successful = True  # Flag to indicate if startup was successful
-current_state = 'INIT'  # State the control is in
+LOG_LEVEL = 3  # Logging level: 0 for None, 1 for Errors, 2 for Info, 3 for Debug.
+
+# ┌─────────────────────┐
+# │ Global Variables    │
+# └─────────────────────┘
+# These are global variables used in the program.
+pump_frequency = 0
+startup_attempts = 0
+startup_successful = True
+current_state = 'INIT'
 emergency_reason = None
 output_temp = None
 exhaust_temp = None
 heartbeat = time.time()
 
 # ┌─────────────────────┐
-# │  Pin Assignments    │
+# │ Pin Assignments     │
 # └─────────────────────┘
-GLOW_PIN = machine.Pin(21, machine.Pin.OUT)  # K1 Relay
-GLOW_PIN.off()
+# Define the hardware pins for various components.
+GLOW_PIN = machine.Pin(21, machine.Pin.OUT)
+GLOW_PIN.off()  # Ensure is initialized to OFF when booting, just in case
 if IS_WATER_HEATER:
-    WATER_PIN = machine.Pin(19, machine.Pin.OUT)  # K2 Relay
-    WATER_PIN.off()
+    WATER_PIN = machine.Pin(19, machine.Pin.OUT)
+    WATER_PIN.off()  # Ensure is initialized to OFF when booting, just in case
 if HAS_SECOND_PUMP:
-    WATER_SECONDARY_PIN = machine.Pin(18, machine.Pin.OUT)  # K3 Relay
-    WATER_SECONDARY_PIN.off()
+    WATER_SECONDARY_PIN = machine.Pin(18, machine.Pin.OUT)
+    WATER_SECONDARY_PIN.off()  # Ensure is initialized to OFF when booting, just in case
 
-# Pin Definitions
 AIR_PIN = machine.Pin(23, machine.Pin.OUT)
-FUEL_PIN = machine.Pin(4, machine.Pin.OUT)  # K4 Relay is 5
-FUEL_PIN.off()
+FUEL_PIN = machine.Pin(5, machine.Pin.OUT)
+FUEL_PIN.off()  # Ensure is initialized to OFF when booting, just in case
 SWITCH_PIN = machine.Pin(33, machine.Pin.IN, machine.Pin.PULL_UP)
 
-# Initialize ADC for output and exhaust temperature
-OUTPUT_TEMP_ADC = machine.ADC(machine.Pin(32))  # Changed to a valid ADC pin
-OUTPUT_TEMP_ADC.atten(machine.ADC.ATTN_11DB)  # Corrected: Full range: 3.3v
-EXHAUST_TEMP_ADC = machine.ADC(machine.Pin(34))  # Changed to a valid ADC pin
-EXHAUST_TEMP_ADC.atten(machine.ADC.ATTN_11DB)  # Corrected: Full range: 3.3v
+# Initialize ADC for temperature sensors
+OUTPUT_TEMP_ADC = machine.ADC(machine.Pin(32))
+OUTPUT_TEMP_ADC.atten(machine.ADC.ATTN_11DB)
+EXHAUST_TEMP_ADC = machine.ADC(machine.Pin(34))
+EXHAUST_TEMP_ADC.atten(machine.ADC.ATTN_11DB)
 
-# Initialize PWM for air
+# Initialize PWM for air control
 air_pwm = machine.PWM(AIR_PIN)
 air_pwm.freq(1000)
-air_pwm.duty(0)  # Ensure the fan isn't initially on after init
+air_pwm.duty(0)  # Ensure is initialized to OFF when booting, just in case
