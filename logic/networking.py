@@ -1,8 +1,6 @@
 import config
-import tempSensors
-import startup
 import time
-import shutdown
+from logic import tempSensors, startup, shutdown
 
 if config.USE_WIFI:
     import network
