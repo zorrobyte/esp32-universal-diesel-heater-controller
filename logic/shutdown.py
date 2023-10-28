@@ -2,6 +2,7 @@ import config
 import time
 from logic import tempSensors
 
+
 def shut_down():
     print("Shutting Down")
     config.pump_frequency = 0  # Stop the fuel pump
