@@ -28,14 +28,14 @@ EXHAUST_SENSOR_BETA = 3000  # BETA value for the exhaust temperature sensor, typ
 # ┌─────────────────────┐
 # │ Device Control      │
 # └─────────────────────┘
-TARGET_TEMP = 60.0  # Target temperature to maintain in °C.
+TARGET_TEMP = 60.0  # Target temperature to maintain in C.
 MIN_FAN_PERCENTAGE = 20  # Minimum fan speed as a percentage of the maximum speed.
 MAX_FAN_PERCENTAGE = 100  # Maximum fan speed as a percentage of the maximum speed.
 MIN_PUMP_FREQUENCY = 1  # Minimum frequency of the water pump in Hz.
 MAX_PUMP_FREQUENCY = 5  # Maximum frequency of the water pump in Hz.
 PUMP_ON_TIME = 0.02  # Duration the pump is on during each pulse, in seconds.
 FAN_MAX_DUTY = 1023  # Maximum duty cycle for the fan's PWM signal.
-CONTROL_MAX_DELTA = 20  # Maximum temperature delta for control logic in °C.
+CONTROL_MAX_DELTA = 20  # Maximum temperature delta for control logic in C.
 EMERGENCY_STOP_TIMER = 600000  # Time before an emergency stop triggers a system reboot, in milliseconds.
 
 # ┌─────────────────────┐

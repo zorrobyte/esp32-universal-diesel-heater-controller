@@ -41,25 +41,25 @@ def start_up():
             config.air_pwm.duty(fan_duty)
             config.GLOW_PIN.on()
             state_message(state, f"Fan: {fan_speed_percentage}%, Glow plug: On")
-            state = "WAIT_GLOW_PLUG"
+            state = "INITIAL_FUELING"
 
-        elif state == "WAIT_GLOW_PLUG":
+        elif state == "INITIAL_FUELING":
             # state_message(state, "Waiting for glow plug to heat up...")
             if current_time >= glow_plug_heat_up_end_time:
                 config.pump_frequency = 1
                 state_message(state, f"Fuel Pump: {config.pump_frequency} Hz")
-                state = "CHECK_TEMP"
+                state = "RAMPING_UP"
                 last_time_checked = current_time
                 exhaust_temps = []
 
-        elif state == "CHECK_TEMP":
+        elif state == "RAMPING_UP":
             if current_time - last_time_checked >= 1:
                 last_time_checked = current_time
                 exhaust_temps.append(tempSensors.read_exhaust_temp())
 
                 if len(exhaust_temps) >= 20:
                     avg_exhaust_temp = sum(exhaust_temps) / len(exhaust_temps)
-                    state_message(state, f"Average Exhaust Temp at step {step}: {avg_exhaust_temp}°C")
+                    state_message(state, f"Average Exhaust Temp at step {step}: {avg_exhaust_temp}C")
 
                     if avg_exhaust_temp >= 100:
                         state_message("COMPLETED", "Reached target exhaust temperature. Startup Procedure Completed.")

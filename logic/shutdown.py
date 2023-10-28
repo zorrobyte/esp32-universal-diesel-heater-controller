@@ -36,7 +36,7 @@ def shut_down():
             elapsed_time = time.time() - cooldown_start_time
 
             log(
-                f"Cooling down... Elapsed Time: {elapsed_time}s, Target Exhaust Temp: {config.EXHAUST_SHUTDOWN_TEMP}°C, Current Exhaust Temp: {current_exhaust_temp}°C")
+                f"Cooling down... Elapsed Time: {elapsed_time}s, Target Exhaust Temp: {config.EXHAUST_SHUTDOWN_TEMP}C, Current Exhaust Temp: {current_exhaust_temp}C")
 
             if elapsed_time >= config.COOLDOWN_MIN_TIME and current_exhaust_temp <= config.EXHAUST_SHUTDOWN_TEMP:
                 step += 1
