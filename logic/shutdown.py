@@ -1,40 +1,53 @@
 import config
 import time
-from logic import tempSensors
+from logic import tempSensors, emergencyStop
 
 
 def shut_down():
     print("Shutting Down")
-    config.pump_frequency = 0  # Stop the fuel pump
-    if config.IS_WATER_HEATER:
-        config.WATER_PIN.on()  # If it's a water heater, turn the water mosfet on
-    if config.HAS_SECOND_PUMP:
-        config.WATER_SECONDARY_PIN.on()
+    step = 0
+    cooldown_start_time = None
+    shutdown_start_time = time.time()  # Record the time when the shutdown process starts
 
-    # If startup was not successful, run the fan at 100% for 30 seconds
-    if not config.startup_successful:
-        print("Startup failed. Running fan at 100% for 30 seconds to purge.")
-        config.air_pwm.duty(1023)  # 100% fan speed
-        config.GLOW_PIN.on()  # Glow plug on to help purge
-        if config.IS_SIMULATION:
-            time.sleep(5)
-        else:
-            time.sleep(30)  # Run the fan for 30 seconds
-        config.GLOW_PIN.off()
+    while True:
+        config.heartbeat = time.time()  # Update heartbeat
 
-    config.air_pwm.duty(1023)  # Set fan to 100% for normal shutdown as well
-    config.GLOW_PIN.on()  # Turn on the glow plug
+        # Check if the shutdown process is taking too long (more than 5 minutes)
+        if time.time() - shutdown_start_time > 300:
+            emergencyStop.emergency_stop("Shutdown took too long")
+            return
 
-    while tempSensors.read_exhaust_temp() > config.EXHAUST_SHUTDOWN_TEMP:
-        config.air_pwm.duty(1023)  # Maintain 100% fan speed
-        print("Waiting for cooldown, exhaust temp is:", tempSensors.read_exhaust_temp())
-        time.sleep(5)  # Wait for 5 seconds before checking again
+        if step == 0:
+            print("Stopping fuel supply...")
+            config.pump_frequency = 0  # Stop the fuel pump
+            step += 1
 
-    config.air_pwm.duty(0)  # Turn off the fan
-    if config.IS_WATER_HEATER:
-        config.WATER_PIN.off()  # Turn off the water mosfet if it's a water heater
-    if config.HAS_SECOND_PUMP:
-        config.WATER_SECONDARY_PIN.off()
-    config.GLOW_PIN.off()  # Turn off the glow plug
+        elif step == 1:
 
-    print("Finished Shutting Down")
+            if cooldown_start_time is None:
+                print("Activating glow plug and fan for purging and cooling...")
+                config.air_pwm.duty(1023)  # Run fan at 100% to purge system
+                config.GLOW_PIN.on()  # Glow plug on to help purge
+                cooldown_start_time = time.time()
+
+            current_exhaust_temp = tempSensors.read_exhaust_temp()
+            elapsed_time = time.time() - cooldown_start_time
+
+            print(
+                f"Cooling down... Elapsed Time: {elapsed_time}s, Target Exhaust Temp: {config.EXHAUST_SHUTDOWN_TEMP}°C, Current Exhaust Temp: {current_exhaust_temp}°C")
+
+            if elapsed_time >= 30 and current_exhaust_temp <= config.EXHAUST_SHUTDOWN_TEMP:
+                step += 1
+
+        elif step == 2:
+            print("Turning off electrical components...")
+            config.air_pwm.duty(0)  # Turn off the fan
+            config.GLOW_PIN.off()  # Turn off the glow plug
+            if config.IS_WATER_HEATER:
+                config.WATER_PIN.off()  # Turn off the water mosfet if it's a water heater
+            if config.HAS_SECOND_PUMP:
+                config.WATER_SECONDARY_PIN.off()
+            print("Finished Shutting Down")
+            break
+
+        time.sleep(1)  # Sleep for a short while before the next iteration

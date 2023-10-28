@@ -13,9 +13,9 @@ IS_SIMULATION = True  # True to run in simulation mode
 # ┌─────────────────────┐
 # │  Safety Limits      │
 # └─────────────────────┘
-EXHAUST_SAFE_TEMP = 100  # Max safe temp for exhaust (°C)
+EXHAUST_SAFE_TEMP = 160  # Max safe temp for exhaust (°C)
 OUTPUT_SAFE_TEMP = 90  # Max safe temp for output (°C)
-EXHAUST_SHUTDOWN_TEMP = 40.0  # Exhaust shutdown temp (°C)
+EXHAUST_SHUTDOWN_TEMP = 80.0  # Exhaust shutdown temp (°C)
 
 # ┌─────────────────────┐
 # │  WiFi Settings      │
