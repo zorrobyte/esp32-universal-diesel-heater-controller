@@ -68,7 +68,6 @@ _thread.start_new_thread(pulse_fuel_thread, ())
 
 def main():
     while True:
-        # Uncomment the following line if you're using a Watchdog Timer
         config.heartbeat = time.time()
 
         networking.run_networking()
