@@ -34,6 +34,7 @@ def connect_wifi():
             while not wlan.isconnected():
                 time.sleep(1)
             print('WiFi connected!')
+            print(f"IP Address: {wlan.ifconfig()[0]}")  # Printing the IP address
         except Exception as e:
             print(f"Error with WiFi: {e}")
 
@@ -68,9 +69,11 @@ def publish_sensor_values():
         try:
             output_temp = tempSensors.read_output_temp()
             exhaust_temp = tempSensors.read_exhaust_temp()
+            current_state = config.current_state  # Get the current state
             payload = {
                 "output_temp": output_temp,
-                "exhaust_temp": exhaust_temp
+                "exhaust_temp": exhaust_temp,
+                "current_state": current_state  # Add the current state
             }
             mqtt_client.publish(config.SENSOR_VALUES_TOPIC, json.dumps(payload))
         except Exception as e:
@@ -80,7 +83,6 @@ def publish_sensor_values():
 # Main function for networking
 def run_networking():
     connect_wifi()
-
     if config.USE_MQTT and mqtt_client:
         try:
             mqtt_client.check_msg()
