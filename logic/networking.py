@@ -58,12 +58,12 @@ def publish_sensor_values():
             "output_temp": config.output_temp,
             "exhaust_temp": config.exhaust_temp,
             "current_state": config.current_state,
-            "fan_speed_percentage": config.fan_speed_percentage,  # New attribute
-            "pump_frequency": config.pump_frequency,  # New attribute
-            "startup_attempts": config.startup_attempts,  # New attribute
-            "emergency_reason": config.emergency_reason,  # New attribute
-            "heartbeat": config.heartbeat,  # New attribute
-            "startup_successful": config.startup_successful  # New attribute
+            "fan_speed_percentage": config.fan_speed_percentage,
+            "pump_frequency": config.pump_frequency,
+            "startup_attempts": config.startup_attempts,
+            "emergency_reason": config.emergency_reason,
+            "heartbeat": config.heartbeat,
+            "startup_successful": config.startup_successful
         }
         mqtt_client.publish(config.SENSOR_VALUES_TOPIC, json.dumps(payload))
 
@@ -79,7 +79,6 @@ def mqtt_callback(topic, msg):
             config.current_state = 'STARTING'
         elif msg == "stop":
             config.current_state = 'STOPPING'
-    # Add more elif clauses here for the new settable attributes
     elif topic == "set/exhaust_safe_temp":
         config.EXHAUST_SAFE_TEMP = float(msg)
     elif topic == "set/output_safe_temp":
@@ -114,9 +113,9 @@ def run_networking():
         init_mqtt()
         mqtt_initialized = True
 
-    if not wlan.isconnected():
+    if wlan and not wlan.isconnected():  # Check wlan is not None
         connect_wifi()
-    if wlan.isconnected():
+    if wlan and wlan.isconnected():  # Check wlan is not None
         if mqtt_client is None:
             connect_mqtt()
         if mqtt_client:  # Make sure mqtt_client is not None
@@ -129,3 +128,5 @@ def run_networking():
             except Exception as e:
                 print(f'Failed in MQTT operation: {e}')
                 mqtt_client = None  # Reset client to None to attempt re-initialization later
+
+    utime.sleep(0.1)  # Add sleep to avoid CPU hogging

@@ -1,5 +1,6 @@
 import config
 import utime
+from logic import tempSensors
 
 
 def log(message, level=2):
@@ -10,12 +11,13 @@ def log(message, level=2):
 def shut_down():
     log("Shutting Down")
     step = 0
+    config.current_state = 'STOPPING'
     cooldown_start_time = None
     shutdown_start_time = utime.time()
 
     while True:
         config.heartbeat = utime.ticks_ms()
-
+        config.exhaust_temp = tempSensors.read_exhaust_temp()
         if utime.time() - shutdown_start_time > config.SHUTDOWN_TIME_LIMIT:
             log("Shutdown took too long, triggering emergency stop.")
             return
