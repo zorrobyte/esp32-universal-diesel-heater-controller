@@ -1,5 +1,5 @@
 import config
-import time
+import utime
 import main
 from logic import tempSensors
 
@@ -9,13 +9,16 @@ def state_message(state, message):
 
 
 def start_up():
-    state = "INIT_SYSTEM"
+    state = "WARMING_GLOW_PLUG"
     step = 1
     exhaust_temps = []
     initial_exhaust_temp = None
     config.fan_speed_percentage = 20
-    last_time_checked = time.time()
-    glow_plug_heat_up_end_time = last_time_checked + 60
+    last_time_checked = utime.time()
+    if config.IS_SIMULATION:
+        glow_plug_heat_up_end_time = last_time_checked + 1
+    else:
+        glow_plug_heat_up_end_time = last_time_checked + 60
     startup_start_time = last_time_checked
     startup_time_limit = 300  # 5 minutes in seconds
 
@@ -29,7 +32,7 @@ def start_up():
             config.startup_successful = False
             return
 
-        if state == "INIT_SYSTEM":
+        if state == "WARMING_GLOW_PLUG":
             state_message(state, "Initializing system...")
             config.startup_successful = False  # Assume startup will fail
             initial_exhaust_temp = tempSensors.read_exhaust_temp()

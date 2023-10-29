@@ -1,5 +1,5 @@
 import machine
-import time
+import utime
 
 # ┌─────────────────────┐
 # │ General Settings    │
@@ -97,7 +97,7 @@ current_state = 'INIT'
 emergency_reason = None
 output_temp = 0
 exhaust_temp = 0
-heartbeat = time.time()
+heartbeat = utime.time()
 fan_speed_percentage = 0
 
 # ┌─────────────────────┐

@@ -1,5 +1,5 @@
 import config
-import time
+import utime
 
 
 def log(message, level=2):
@@ -11,12 +11,12 @@ def shut_down():
     log("Shutting Down")
     step = 0
     cooldown_start_time = None
-    shutdown_start_time = time.time()
+    shutdown_start_time = utime.time()
 
     while True:
-        config.heartbeat = time.time()
+        config.heartbeat = utime.time()
 
-        if time.time() - shutdown_start_time > config.SHUTDOWN_TIME_LIMIT:
+        if utime.time() - shutdown_start_time > config.SHUTDOWN_TIME_LIMIT:
             log("Shutdown took too long, triggering emergency stop.")
             return
 
@@ -30,10 +30,10 @@ def shut_down():
                 log("Activating glow plug and fan for purging and cooling...")
                 config.air_pwm.duty(config.FAN_MAX_DUTY)
                 config.GLOW_PIN.on()
-                cooldown_start_time = time.time()
+                cooldown_start_time = utime.time()
 
             current_exhaust_temp = config.exhaust_temp
-            elapsed_time = time.time() - cooldown_start_time
+            elapsed_time = utime.time() - cooldown_start_time
 
             log(
                 f"Cooling down... Elapsed Time: {elapsed_time}s, Target Exhaust Temp: {config.EXHAUST_SHUTDOWN_TEMP}C, Current Exhaust Temp: {current_exhaust_temp}C")
@@ -52,4 +52,4 @@ def shut_down():
             log("Finished Shutting Down")
             break
 
-        time.sleep(1)
+        utime.sleep(1)

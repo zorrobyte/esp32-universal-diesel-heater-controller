@@ -53,7 +53,7 @@ def control_air_and_fuel(output_temp, exhaust_temp):
     config.air_pwm.duty(fan_duty)
     config.pump_frequency = pump_frequency
 
-    log(f"Fan speed: {config.fan_speed_percentage}%, Pump frequency: {pump_frequency} Hz")
+    log(f"Fan speed: {config.fan_speed_percentage}%, Pump frequency: {pump_frequency} Hz, Exhaust Temp: {config.exhaust_temp}, Output Temp: {config.output_temp}")
 
     # Additional hardware controls
     if config.IS_WATER_HEATER:

@@ -46,14 +46,26 @@ def read_temp(analog_value, sensor_type, sensor_beta):
         return 999
 
 
-ot = 20
+# Global variables for simulation
+simulated_output_temp = 20  # Simulated output temperature
+simulated_exhaust_temp = 20  # Simulated exhaust temperature
+output_temp_ramp_direction = 1  # 1 for ramping up, -1 for ramping down
 
 
+# Read simulated output temperature
 def read_output_temp():
-    global ot
+    global simulated_output_temp, output_temp_ramp_direction
     if config.IS_SIMULATION:
-        ot = ot + 1
-        return min(ot, 50)
+        if config.current_state == 'RUNNING':
+            if simulated_output_temp >= 80:
+                output_temp_ramp_direction = -1  # Change direction to ramp down
+            elif simulated_output_temp <= 50:
+                output_temp_ramp_direction = 1  # Change direction to ramp up
+
+            simulated_output_temp += output_temp_ramp_direction  # Increment or decrement based on direction
+        else:
+            simulated_output_temp = 20  # Reset to 20 for other states
+        return simulated_output_temp
     else:
         return read_temp(
             config.OUTPUT_TEMP_ADC.read(),
@@ -62,14 +74,19 @@ def read_output_temp():
         )
 
 
-et = 20
-
-
+# Read simulated exhaust temperature
 def read_exhaust_temp():
-    global et
+    global simulated_exhaust_temp
     if config.IS_SIMULATION:
-        et = et + 1
-        return min(et, 119)
+        if config.current_state == 'STARTING':
+            simulated_exhaust_temp = min(simulated_exhaust_temp + 1, 120)
+        elif config.current_state == 'RUNNING':
+            simulated_exhaust_temp = 120
+        elif config.current_state == 'STOPPING':
+            simulated_exhaust_temp = max(simulated_exhaust_temp - 1, 20)
+        else:
+            simulated_exhaust_temp = 20  # Reset to 20 for other states
+        return simulated_exhaust_temp
     else:
         return read_temp(
             config.EXHAUST_TEMP_ADC.read(),

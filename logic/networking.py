@@ -1,5 +1,5 @@
 import config
-import time
+import utime
 import json
 import network
 from umqtt.simple import MQTTClient
@@ -31,7 +31,7 @@ def connect_wifi():
         print('Attempting WiFi connection...')
         wlan.connect(config.SSID, config.PASSWORD)
         while not wlan.isconnected():
-            time.sleep(1)
+            utime.sleep(1)
         print(f'WiFi connected! IP Address: {wlan.ifconfig()[0]}')
 
 
