@@ -10,6 +10,21 @@ IS_WATER_HEATER = True  # Set to True if this device is controlling a water or c
 HAS_SECOND_PUMP = True  # Set to True if there is a secondary water pump in the system.
 
 # ┌─────────────────────┐
+# │ Network Settings    │
+# └─────────────────────┘
+SSID = 'Your_WiFi_SSID'  # SSID of the WiFi network to connect to
+PASSWORD = 'Your_WiFi_Password'  # Password of the WiFi network
+MQTT_SERVER = 'mqtt.example.com'  # Address of the MQTT broker
+MQTT_CLIENT_ID = 'your_client_id'  # MQTT client ID
+MQTT_USERNAME = 'mqtt_username'  # MQTT username (optional)
+MQTT_PASSWORD = 'mqtt_password'  # MQTT password (optional)
+
+# MQTT Topics
+SENSOR_VALUES_TOPIC = 'sensors/values'  # Topic to publish sensor values
+SET_TEMP_TOPIC = 'set/temperature'  # Topic to receive the target temperature
+COMMAND_TOPIC = 'command'  # Topic to receive commands like "start" and "stop"
+
+# ┌─────────────────────┐
 # │ Safety Limits       │
 # └─────────────────────┘
 EXHAUST_SAFE_TEMP = 160  # Max safe temperature for exhaust in C.

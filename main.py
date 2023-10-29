@@ -62,14 +62,18 @@ def emergency_stop_thread():
         time.sleep(1)  # Check every second
 
 
+def run_networking_thread():
+    while True:
+        networking.run_networking()
+        time.sleep(1)  # Adjust sleep time as needed
+
 _thread.start_new_thread(emergency_stop_thread, ())
 _thread.start_new_thread(pulse_fuel_thread, ())
-
+_thread.start_new_thread(run_networking_thread, ())
 
 def main():
     while True:
         config.heartbeat = time.time()
-        networking.run_networking()
 
         config.output_temp = tempSensors.read_output_temp()
         config.exhaust_temp = tempSensors.read_exhaust_temp()
