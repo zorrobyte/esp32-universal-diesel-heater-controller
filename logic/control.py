@@ -56,10 +56,8 @@ def control_air_and_fuel(output_temp, exhaust_temp):
     log(f"Fan speed: {config.fan_speed_percentage}%, Pump frequency: {pump_frequency} Hz")
 
     # Additional hardware controls
-    if not config.IS_WATER_HEATER:
+    if config.IS_WATER_HEATER:
         config.WATER_PIN.on()
-        log("Water heating enabled.")
 
-    if not config.HAS_SECOND_PUMP:
+    if config.HAS_SECOND_PUMP:
         config.WATER_SECONDARY_PIN.on()
-        log("Secondary water pump enabled.")

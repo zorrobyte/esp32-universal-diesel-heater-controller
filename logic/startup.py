@@ -40,6 +40,10 @@ def start_up():
             fan_duty = int((config.fan_speed_percentage / 100) * 1023)
             config.air_pwm.duty(fan_duty)
             config.GLOW_PIN.on()
+            if config.IS_WATER_HEATER:
+                config.WATER_PIN.on()
+            if config.HAS_SECOND_PUMP:
+                config.WATER_SECONDARY_PIN.on()
             state_message(state, f"Fan: {config.fan_speed_percentage}%, Glow plug: On")
             state = "INITIAL_FUELING"
 
