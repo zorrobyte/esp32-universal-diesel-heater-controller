@@ -49,7 +49,7 @@ def handle_state(current_state, switch_value, exhaust_temp, output_temp):
 
     # When in STANDBY and the temps drops 10C under the set state, we transition from STANDBY to STARTING, then RUNNING
     if current_state == 'STANDBY':
-        if output_temp < config.TARGET_TEMP - 10:
+        if output_temp < config.TARGET_TEMP - 10 and switch_value == 0:
             return 'STARTING', None
         elif switch_value == 1:
             config.startup_attempts = 0
