@@ -8,6 +8,7 @@ USE_WIFI = False  # Enable or disable Wi-Fi functionality (not yet implemented).
 USE_MQTT = False  # Enable or disable MQTT functionality (not yet implemented).
 IS_WATER_HEATER = True  # Set to True if this device is controlling a water or coolant heater.
 HAS_SECOND_PUMP = True  # Set to True if there is a secondary water pump in the system.
+IS_SIMULATION = True  # Set to True if you wish to simulate without sensors, etc connected
 
 # ┌─────────────────────┐
 # │ Network Settings    │
@@ -81,8 +82,8 @@ startup_attempts = 0
 startup_successful = True
 current_state = 'INIT'
 emergency_reason = None
-output_temp = None
-exhaust_temp = None
+output_temp = 0
+exhaust_temp = 0
 heartbeat = time.time()
 
 # ┌─────────────────────┐

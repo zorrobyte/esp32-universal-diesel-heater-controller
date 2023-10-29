@@ -65,6 +65,7 @@ def start_up():
                         state_message("COMPLETED", "Reached target exhaust temperature. Startup Procedure Completed.")
                         config.startup_successful = True
                         config.startup_attempts = 0
+                        config.GLOW_PIN.off()
                         return
 
                     elif initial_exhaust_temp + 5 < avg_exhaust_temp:
