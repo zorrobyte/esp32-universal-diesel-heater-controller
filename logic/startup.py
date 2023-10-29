@@ -23,8 +23,8 @@ def start_up():
     startup_time_limit = 300  # 5 minutes in seconds
 
     while True:
-        current_time = time.time()
-        config.heartbeat = current_time
+        current_time = utime.time()
+        config.heartbeat = utime.ticks_ms()
         main.wdt.feed()
 
         if current_time - startup_start_time > startup_time_limit:

@@ -56,9 +56,9 @@ pulse_timer.init(period=100, mode=Timer.PERIODIC, callback=pulse_fuel_callback)
 def emergency_stop_thread():
     while True:
         wdt.feed()
-        current_time = utime.time()
+        current_time = utime.ticks_ms()  # Use ticks_ms to get the current time in milliseconds
 
-        if current_time - config.heartbeat > 10:
+        if utime.ticks_diff(current_time, config.heartbeat) > 10000:  # Compare in milliseconds (10 seconds = 10000 ms)
             emergencyStop.emergency_stop("No heartbeat detected")
 
         utime.sleep(1)
@@ -72,7 +72,7 @@ def run_networking_thread():
 
 def main():
     while True:
-        config.heartbeat = utime.time()
+        config.heartbeat = utime.ticks_ms()
 
         config.output_temp = tempSensors.read_output_temp()
         config.exhaust_temp = tempSensors.read_exhaust_temp()

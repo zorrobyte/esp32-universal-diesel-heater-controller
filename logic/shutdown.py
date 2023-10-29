@@ -14,7 +14,7 @@ def shut_down():
     shutdown_start_time = utime.time()
 
     while True:
-        config.heartbeat = utime.time()
+        config.heartbeat = utime.ticks_ms()
 
         if utime.time() - shutdown_start_time > config.SHUTDOWN_TIME_LIMIT:
             log("Shutdown took too long, triggering emergency stop.")
