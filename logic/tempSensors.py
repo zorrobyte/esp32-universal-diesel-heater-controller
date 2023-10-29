@@ -46,17 +46,33 @@ def read_temp(analog_value, sensor_type, sensor_beta):
         return 999
 
 
+ot = 20
+
+
 def read_output_temp():
-    return read_temp(
-        config.OUTPUT_TEMP_ADC.read(),
-        config.OUTPUT_SENSOR_TYPE,
-        config.OUTPUT_SENSOR_BETA
-    )
+    global ot
+    if config.IS_SIMULATION:
+        ot = ot + 1
+        return min(ot, 50)
+    else:
+        return read_temp(
+            config.OUTPUT_TEMP_ADC.read(),
+            config.OUTPUT_SENSOR_TYPE,
+            config.OUTPUT_SENSOR_BETA
+        )
+
+
+et = 20
 
 
 def read_exhaust_temp():
-    return read_temp(
-        config.EXHAUST_TEMP_ADC.read(),
-        config.EXHAUST_SENSOR_TYPE,
-        config.EXHAUST_SENSOR_BETA
-    )
+    global et
+    if config.IS_SIMULATION:
+        et = et + 1
+        return min(et, 119)
+    else:
+        return read_temp(
+            config.EXHAUST_TEMP_ADC.read(),
+            config.EXHAUST_SENSOR_TYPE,
+            config.EXHAUST_SENSOR_BETA
+        )
