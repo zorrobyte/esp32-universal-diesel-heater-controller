@@ -8,16 +8,16 @@ def log(message, level=1):
 
 
 def turn_off_pumps(timer):
-    config.air_pwm.duty(config.FAN_MAX_DUTY)
-    log("Air pump turned off after 10 minutes.")
+    config.air_pwm.duty(0)
+    log("Fan turned off after 10 minutes.")
 
     if config.IS_WATER_HEATER:
-        config.WATER_PIN.on()
-        log("Water pump turned on after 10 minutes.")
+        config.WATER_PIN.off()
+        log("Water pump turned off after 10 minutes.")
 
     if config.HAS_SECOND_PUMP:
-        config.WATER_SECONDARY_PIN.on()
-        log("Secondary water pump turned on after 10 minutes.")
+        config.WATER_SECONDARY_PIN.off()
+        log("Secondary water pump turned off after 10 minutes.")
 
     timer.deinit()  # Stop the timer
     log("Performing hard reset...")
@@ -35,5 +35,10 @@ def emergency_stop(reason):
         config.current_state = 'EMERGENCY_STOP'
         config.GLOW_PIN.off()
         config.FUEL_PIN.off()
+        if config.IS_WATER_HEATER:
+            config.WATER_PIN.on()
+        if config.HAS_SECOND_PUMP:
+            config.WATER_SECONDARY_PIN.on()
+        config.air_pwm.duty(config.FAN_MAX_DUTY)
         config.pump_frequency = 0
         log("All pins and frequencies set to safe states. Please reboot to continue.")
