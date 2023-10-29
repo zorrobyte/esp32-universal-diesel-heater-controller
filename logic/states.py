@@ -77,7 +77,11 @@ def running(current_switch_value, exhaust_temp, output_temp):
     elif output_temp > config.TARGET_TEMP + 10:
         return 'STANDBY', None
     else:
-        control.control_air_and_fuel(output_temp, exhaust_temp)
+        flame_out = control.control_air_and_fuel(output_temp, exhaust_temp)
+        if flame_out == "FLAME_OUT":
+            log("Flame out detected. Transitioning to OFF state.", level=0)
+            config.startup_attempts += 1  # Increment startup attempts as the flame went out
+            return 'OFF', None
         return 'RUNNING', None
 
 

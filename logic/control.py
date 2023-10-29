@@ -1,5 +1,8 @@
 import config
 
+# Initialize a list to store the last N exhaust temperatures
+exhaust_temp_history = []
+
 
 def log(message, level=1):
     if config.LOG_LEVEL >= level:
@@ -21,7 +24,20 @@ def calculate_pump_frequency(target_temp, output_temp, max_delta, max_frequency,
 
 def control_air_and_fuel(output_temp, exhaust_temp):
     log("Performing air and fuel control...")
-    # TODO: IMPLEMENT FLAME OUT BASED ON exhaust_temp
+
+    # Update the exhaust temperature history
+    exhaust_temp_history.append(exhaust_temp)
+
+    # Manually enforce maximum length
+    while len(exhaust_temp_history) > config.EXHAUST_TEMP_HISTORY_LENGTH:
+        exhaust_temp_history.pop(0)
+
+    # Check for decreasing exhaust temperature over the last N readings
+    if len(exhaust_temp_history) == config.EXHAUST_TEMP_HISTORY_LENGTH:
+        if all(earlier - later > config.MIN_TEMP_DELTA for earlier, later in
+               zip(exhaust_temp_history, exhaust_temp_history[1:])):
+            log("Flame out detected based on decreasing exhaust temperature. Exiting...", level=0)
+            return "FLAME_OUT"
 
     fan_duty, fan_speed_percentage = calculate_fan_duty(
         config.TARGET_TEMP, output_temp, config.CONTROL_MAX_DELTA,

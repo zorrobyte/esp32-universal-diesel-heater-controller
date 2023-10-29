@@ -69,6 +69,19 @@ COOLDOWN_MIN_TIME = 30  # Minimum time for the system to cool down, in seconds, 
 EXHAUST_SHUTDOWN_TEMP = 80.0  # Temperature at which we consider the heater cooled down in C.
 
 # ┌─────────────────────┐
+# │ Flame-out Detection │
+# └─────────────────────┘
+# Length of the deque storing the last N exhaust temperature readings.
+# This helps in detecting a consistent decrease in exhaust temperature,
+# which may signify a flame-out condition.
+EXHAUST_TEMP_HISTORY_LENGTH = 5
+
+# The minimum meaningful temperature decrease in Celsius.
+# If the exhaust temperature consistently falls by this amount or more,
+# it may indicate a flame-out.
+MIN_TEMP_DELTA = 0.5
+
+# ┌─────────────────────┐
 # │ Logging Level       │
 # └─────────────────────┘
 LOG_LEVEL = 3  # Logging level: 0 for None, 1 for Errors, 2 for Info, 3 for Debug.
