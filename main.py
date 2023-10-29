@@ -2,6 +2,7 @@ import machine
 import time
 import _thread
 import config
+from machine import Timer
 from logic import networking, tempSensors, states, emergencyStop
 
 # Initialize the WDT with a 10-second timeout
@@ -22,22 +23,36 @@ def get_reset_reason():
     return reset_reason
 
 
-def pulse_fuel_thread():
-    while True:
-        current_time = time.time()
-        if current_time - config.heartbeat > 10:  # No heartbeat for the last 10 seconds
-            config.FUEL_PIN.off()
-            log("Heartbeat missing, fuel pump turned off.")
-        elif config.pump_frequency > 0:
-            period = 1.0 / config.pump_frequency
-            off_time = period - config.PUMP_ON_TIME
+pulse_timer = Timer(0)  # Use the first hardware timer
+
+last_pulse_time = 0
+
+# Additional hardware timer for turning off the pump
+off_timer = Timer(1)
+
+
+def turn_off_pump(_):
+    config.FUEL_PIN.off()
+
+
+def pulse_fuel_callback(_):
+    global last_pulse_time
+    current_time = time.time()
+    if current_time - config.heartbeat > 10:  # No heartbeat for the last 10 seconds
+        config.FUEL_PIN.off()
+        log("Heartbeat missing, fuel pump turned off.")
+    elif config.pump_frequency > 0:
+        period = 1.0 / config.pump_frequency
+        if current_time - last_pulse_time >= period:
+            last_pulse_time = current_time
             config.FUEL_PIN.on()
-            time.sleep(config.PUMP_ON_TIME)
-            config.FUEL_PIN.off()
-            time.sleep(off_time)
-        else:
-            config.FUEL_PIN.off()  # Ensure the pump is off if frequency is zero
-            time.sleep(0.1)
+            off_timer.init(period=int(config.PUMP_ON_TIME * 1000), mode=Timer.ONE_SHOT, callback=turn_off_pump)
+    else:
+        config.FUEL_PIN.off()  # Ensure the pump is off if frequency is zero
+
+
+# Initialize the timer to call pulse_fuel_callback every 100 milliseconds
+pulse_timer.init(period=100, mode=Timer.PERIODIC, callback=pulse_fuel_callback)
 
 
 def emergency_stop_thread():
@@ -69,7 +84,6 @@ def run_networking_thread():
 
 
 _thread.start_new_thread(emergency_stop_thread, ())
-_thread.start_new_thread(pulse_fuel_thread, ())
 _thread.start_new_thread(run_networking_thread, ())
 
 
