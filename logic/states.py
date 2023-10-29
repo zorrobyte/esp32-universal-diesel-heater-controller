@@ -11,6 +11,18 @@ def handle_state(current_state, switch_value, exhaust_temp, output_temp):
     emergency_reason = None
     next_state = current_state  # Default to staying in the current state
 
+    # State transition rules
+    allowed_transitions = {
+        'INIT': ['OFF', 'INIT'],
+        'OFF': ['STANDBY', 'STARTING', 'FAILURE', 'OFF'],
+        'STARTING': ['RUNNING', 'STOPPING', 'STARTING'],
+        'RUNNING': ['STOPPING', 'RUNNING'],
+        'STOPPING': ['OFF', 'STANDBY', 'STOPPING'],
+        'STANDBY': ['STARTING', 'OFF', 'STANDBY'],
+        'FAILURE': ['OFF', 'FAILURE'],
+        'EMERGENCY_STOP': ['EMERGENCY_STOP']
+    }
+
     if current_state == 'INIT':
         next_state, emergency_reason = init()
 
@@ -35,10 +47,16 @@ def handle_state(current_state, switch_value, exhaust_temp, output_temp):
     elif current_state == 'EMERGENCY_STOP':
         next_state, emergency_reason = emergency_stop()
 
+    # Enforce allowed transitions
+    if next_state not in allowed_transitions.get(current_state, []):
+        log(f"Invalid transition from {current_state} to {next_state}. Keeping current state.", level=0)
+        next_state = current_state
+
     if current_state != next_state:
         log(f"Transitioning from {current_state} to {next_state}", level=2)
 
     return next_state, emergency_reason
+
 
 
 def init():
