@@ -4,8 +4,8 @@ import time
 # ┌─────────────────────┐
 # │ General Settings    │
 # └─────────────────────┘
-USE_WIFI = False  # Enable or disable Wi-Fi functionality (not yet implemented).
-USE_MQTT = False  # Enable or disable MQTT functionality (not yet implemented).
+USE_WIFI = False  # Enable or disable Wi-Fi functionality.
+USE_MQTT = False  # Enable or disable MQTT functionality.
 IS_WATER_HEATER = True  # Set to True if this device is controlling a water or coolant heater.
 HAS_SECOND_PUMP = True  # Set to True if there is a secondary water pump in the system.
 IS_SIMULATION = True  # Set to True if you wish to simulate without sensors, etc connected
@@ -13,12 +13,12 @@ IS_SIMULATION = True  # Set to True if you wish to simulate without sensors, etc
 # ┌─────────────────────┐
 # │ Network Settings    │
 # └─────────────────────┘
-SSID = 'Your_WiFi_SSID'  # SSID of the WiFi network to connect to
-PASSWORD = 'Your_WiFi_Password'  # Password of the WiFi network
-MQTT_SERVER = 'mqtt.example.com'  # Address of the MQTT broker
-MQTT_CLIENT_ID = 'your_client_id'  # MQTT client ID
-MQTT_USERNAME = 'mqtt_username'  # MQTT username (optional)
-MQTT_PASSWORD = 'mqtt_password'  # MQTT password (optional)
+SSID = 'SSID'  # SSID of the WiFi network to connect to
+PASSWORD = 'PASSWORD'  # Password of the WiFi network
+MQTT_SERVER = '10.0.0.137'  # Address of the MQTT broker
+MQTT_CLIENT_ID = 'esp32_oshw_controller'  # MQTT client ID
+MQTT_USERNAME = 'USERNAME'  # MQTT username
+MQTT_PASSWORD = 'PASSWORD'  # MQTT password
 
 # MQTT Topics
 SENSOR_VALUES_TOPIC = 'sensors/values'  # Topic to publish sensor values
@@ -98,6 +98,7 @@ emergency_reason = None
 output_temp = 0
 exhaust_temp = 0
 heartbeat = time.time()
+fan_speed_percentage = 0
 
 # ┌─────────────────────┐
 # │ Pin Assignments     │

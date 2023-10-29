@@ -11,9 +11,9 @@ def log(message, level=1):
 
 def calculate_fan_duty(target_temp, output_temp, max_delta, max_duty, min_percentage, max_percentage):
     delta = target_temp - output_temp
-    fan_speed_percentage = min(max((delta / max_delta) * 100, min_percentage), max_percentage)
-    fan_duty = int((fan_speed_percentage / 100) * max_duty)
-    return fan_duty, fan_speed_percentage
+    config.fan_speed_percentage = min(max((delta / max_delta) * 100, min_percentage), max_percentage)
+    fan_duty = int((config.fan_speed_percentage / 100) * max_duty)
+    return fan_duty, config.fan_speed_percentage
 
 
 def calculate_pump_frequency(target_temp, output_temp, max_delta, max_frequency, min_frequency):
@@ -39,7 +39,7 @@ def control_air_and_fuel(output_temp, exhaust_temp):
             log("Flame out detected based on decreasing exhaust temperature. Exiting...", level=0)
             return "FLAME_OUT"
 
-    fan_duty, fan_speed_percentage = calculate_fan_duty(
+    fan_duty, config.fan_speed_percentage = calculate_fan_duty(
         config.TARGET_TEMP, output_temp, config.CONTROL_MAX_DELTA,
         config.FAN_MAX_DUTY, config.MIN_FAN_PERCENTAGE, config.MAX_FAN_PERCENTAGE
     )
@@ -53,7 +53,7 @@ def control_air_and_fuel(output_temp, exhaust_temp):
     config.air_pwm.duty(fan_duty)
     config.pump_frequency = pump_frequency
 
-    log(f"Fan speed: {fan_speed_percentage}%, Pump frequency: {pump_frequency} Hz")
+    log(f"Fan speed: {config.fan_speed_percentage}%, Pump frequency: {pump_frequency} Hz")
 
     # Additional hardware controls
     if not config.IS_WATER_HEATER:

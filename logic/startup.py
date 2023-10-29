@@ -13,7 +13,7 @@ def start_up():
     step = 1
     exhaust_temps = []
     initial_exhaust_temp = None
-    fan_speed_percentage = 20
+    config.fan_speed_percentage = 20
     last_time_checked = time.time()
     glow_plug_heat_up_end_time = last_time_checked + 60
     startup_start_time = last_time_checked
@@ -37,10 +37,10 @@ def start_up():
                 state_message(state, "Initial exhaust temperature too high. Changing state to STOPPING.")
                 config.startup_successful = False
                 return
-            fan_duty = int((fan_speed_percentage / 100) * 1023)
+            fan_duty = int((config.fan_speed_percentage / 100) * 1023)
             config.air_pwm.duty(fan_duty)
             config.GLOW_PIN.on()
-            state_message(state, f"Fan: {fan_speed_percentage}%, Glow plug: On")
+            state_message(state, f"Fan: {config.fan_speed_percentage}%, Glow plug: On")
             state = "INITIAL_FUELING"
 
         elif state == "INITIAL_FUELING":
@@ -69,12 +69,12 @@ def start_up():
                         return
 
                     elif initial_exhaust_temp + 5 < avg_exhaust_temp:
-                        fan_speed_percentage = min(fan_speed_percentage + 20, 100)
-                        fan_duty = int((fan_speed_percentage / 100) * 1023)
+                        config.fan_speed_percentage = min(config.fan_speed_percentage + 20, 100)
+                        fan_duty = int((config.fan_speed_percentage / 100) * 1023)
                         config.air_pwm.duty(fan_duty)
                         config.pump_frequency = min(config.pump_frequency + 1, 5)
                         state_message(state,
-                                      f"Step {step} successful. Fan: {fan_speed_percentage}%, Fuel Pump: {config.pump_frequency} Hz")
+                                      f"Step {step} successful. Fan: {config.fan_speed_percentage}%, Fuel Pump: {config.pump_frequency} Hz")
                         initial_exhaust_temp = avg_exhaust_temp
                         step += 1
 
