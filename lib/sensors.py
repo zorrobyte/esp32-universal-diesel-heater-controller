@@ -1,5 +1,7 @@
 import math
 import config
+import utime
+import machine
 
 # Predefined R0, and T0 values for common thermistors
 common_thermistors = {
@@ -93,3 +95,44 @@ def read_exhaust_temp():
             config.EXHAUST_SENSOR_TYPE,
             config.EXHAUST_SENSOR_BETA
         )
+
+
+# Initialize an empty list to keep track of the last N RPM measurements
+rpm_history = []
+
+# The number of past measurements to average
+HISTORY_LENGTH = 5
+
+rpm_interrupt_count = 0
+last_measurement_time = 0
+
+
+# Interrupt handler function for the Hall Effect sensor
+def rpm_interrupt_handler(pin):
+    global rpm_interrupt_count
+    rpm_interrupt_count += 1
+
+
+if config.FAN_RPM_SENSOR:
+    # Initialize the interrupt for the Hall Effect Sensor
+    config.FAN_RPM_PIN.irq(trigger=machine.Pin.IRQ_RISING, handler=rpm_interrupt_handler)
+
+
+def get_fan_rpm():
+    global rpm_interrupt_count, last_measurement_time, rpm_history
+    current_time = utime.ticks_ms()
+    elapsed_time = utime.ticks_diff(current_time, last_measurement_time) / 1000.0  # Convert to seconds
+    rpm = (rpm_interrupt_count / 2) / (elapsed_time / 60)
+    rpm_interrupt_count = 0
+    last_measurement_time = current_time
+
+    # Add the new RPM measurement to the history
+    rpm_history.append(int(round(rpm)))
+
+    # Remove the oldest measurement if history is too long
+    if len(rpm_history) > HISTORY_LENGTH:
+        rpm_history.pop(0)
+
+    # Calculate and return the average RPM
+    avg_rpm = sum(rpm_history) // len(rpm_history)
+    return avg_rpm

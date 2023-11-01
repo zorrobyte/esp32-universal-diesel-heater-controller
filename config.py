@@ -45,6 +45,7 @@ EXHAUST_SENSOR_BETA = 3000  # BETA value for the exhaust temperature sensor, typ
 # │ Device Control      │
 # └─────────────────────┘
 TARGET_TEMP = 60.0  # Target temperature to maintain in C.
+FAN_RPM_SENSOR = False  # If you are using a hall effect sensor for fan RPM like 3144E
 FAN_START_PERCENTAGE = 40  # Since fan PWM is non-linear, we scale fan MIN/MAX by this minimum.
                            # Basically, enter the lowest percentage of full PWM your fan spins.
 MIN_FAN_PERCENTAGE = 20  # Minimum fan speed as a percentage of the maximum speed.
@@ -103,6 +104,7 @@ output_temp = 0
 exhaust_temp = 0
 heartbeat = utime.time()
 fan_speed_percentage = 0
+fan_rpm = 0
 
 # ┌─────────────────────┐
 # │ Pin Assignments     │
@@ -121,6 +123,9 @@ if IS_WATER_HEATER:
 if HAS_SECOND_PUMP:
     WATER_SECONDARY_PIN = machine.Pin(18, machine.Pin.OUT)
     WATER_SECONDARY_PIN.off()  # Ensure is initialized to OFF when booting, just in case
+
+if FAN_RPM_SENSOR:
+    FAN_RPM_PIN = machine.Pin(22, machine.Pin.IN, machine.Pin.PULL_UP)
 
 # Strapping Pin: GPIO 5
 FUEL_PIN = machine.Pin(5, machine.Pin.OUT)

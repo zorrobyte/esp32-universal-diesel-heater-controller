@@ -3,7 +3,8 @@ import _thread
 import config
 import utime
 from machine import Timer
-from logic import networking, tempSensors, states, emergencyStop
+from logic import networking, states, emergencyStop
+from lib import sensors
 
 # Initialize the WDT with a 10-second timeout
 wdt = machine.WDT(id=0, timeout=10000)  # 10 seconds
@@ -74,8 +75,8 @@ def main():
     while True:
         config.heartbeat = utime.ticks_ms()
 
-        config.output_temp = tempSensors.read_output_temp()
-        config.exhaust_temp = tempSensors.read_exhaust_temp()
+        config.output_temp = sensors.read_output_temp()
+        config.exhaust_temp = sensors.read_exhaust_temp()
         current_switch_value = config.SWITCH_PIN.value()
 
         config.current_state, config.emergency_reason = states.handle_state(
@@ -84,6 +85,9 @@ def main():
             config.exhaust_temp,
             config.output_temp
         )
+
+        if config.FAN_RPM_SENSOR:
+            config.fan_rpm = sensors.get_fan_rpm()
 
         log(f"Current state: {config.current_state}")
         if config.emergency_reason:

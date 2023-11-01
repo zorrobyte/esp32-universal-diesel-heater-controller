@@ -1,7 +1,7 @@
 import config
 import utime
 import main
-from logic import tempSensors, shutdown
+from logic import shutdown
 from lib import helpers
 
 
@@ -36,7 +36,7 @@ def start_up():
         if state == "WARMING_GLOW_PLUG":
             state_message(state, "Initializing system...")
             config.startup_successful = False  # Assume startup will fail
-            initial_exhaust_temp = tempSensors.read_exhaust_temp()
+            initial_exhaust_temp = config.exhaust_temp
             if initial_exhaust_temp > 100:
                 state_message(state, "Initial exhaust temperature too high. Stopping...")
                 shutdown.shut_down()
@@ -63,7 +63,7 @@ def start_up():
         elif state == "RAMPING_UP":
             if current_time - last_time_checked >= 1:
                 last_time_checked = current_time
-                exhaust_temps.append(tempSensors.read_exhaust_temp())
+                exhaust_temps.append(config.exhaust_temp)
 
                 if len(exhaust_temps) >= 20:
                     avg_exhaust_temp = sum(exhaust_temps) / len(exhaust_temps)
