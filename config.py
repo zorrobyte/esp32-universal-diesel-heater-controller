@@ -103,19 +103,26 @@ fan_speed_percentage = 0
 # ┌─────────────────────┐
 # │ Pin Assignments     │
 # └─────────────────────┘
+# Note: Be cautious when using ESP32 strapping pins for your components.
+# Strapping pins are: GPIO 0, 2, 4, 5, 12, 15.
+
 # Define the hardware pins for various components.
 GLOW_PIN = machine.Pin(21, machine.Pin.OUT)
 GLOW_PIN.off()  # Ensure is initialized to OFF when booting, just in case
+
 if IS_WATER_HEATER:
     WATER_PIN = machine.Pin(19, machine.Pin.OUT)
     WATER_PIN.off()  # Ensure is initialized to OFF when booting, just in case
+
 if HAS_SECOND_PUMP:
     WATER_SECONDARY_PIN = machine.Pin(18, machine.Pin.OUT)
     WATER_SECONDARY_PIN.off()  # Ensure is initialized to OFF when booting, just in case
 
-AIR_PIN = machine.Pin(23, machine.Pin.OUT)
+# Strapping Pin: GPIO 5
 FUEL_PIN = machine.Pin(5, machine.Pin.OUT)
 FUEL_PIN.off()  # Ensure is initialized to OFF when booting, just in case
+
+AIR_PIN = machine.Pin(23, machine.Pin.OUT)
 SWITCH_PIN = machine.Pin(33, machine.Pin.IN, machine.Pin.PULL_UP)
 
 # Initialize ADC for temperature sensors
@@ -128,3 +135,4 @@ EXHAUST_TEMP_ADC.atten(machine.ADC.ATTN_11DB)
 air_pwm = machine.PWM(AIR_PIN)
 air_pwm.freq(1000)
 air_pwm.duty(0)  # Ensure is initialized to OFF when booting, just in case
+
