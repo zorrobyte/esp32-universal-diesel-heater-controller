@@ -44,20 +44,29 @@ EXHAUST_SENSOR_BETA = 3000  # BETA value for the exhaust temperature sensor, typ
 # ┌─────────────────────┐
 # │ Device Control      │
 # └─────────────────────┘
+
+# ── Temperature Control ──────────────────────────────
 TARGET_TEMP = 60.0  # Target temperature to maintain in C.
-FAN_RPM_SENSOR = False  # If you are using a hall effect sensor for fan RPM like 3144E
-FAN_START_PERCENTAGE = 40  # Since fan PWM is non-linear, we scale fan MIN/MAX by this minimum.
-                           # Basically, enter the lowest percentage of full PWM your fan spins.
-MIN_FAN_PERCENTAGE = 20  # Minimum fan speed as a percentage of the maximum speed.
-                         # NOTE 0% fan speed is truly 0% fan speed. 1% will be FAN_START_PERCENTAGE, etc.
-MAX_FAN_PERCENTAGE = 80  # Maximum fan speed as a percentage of the maximum speed.
-                         # Note that 100% is very fast, possibly over 10Amps!
-MIN_PUMP_FREQUENCY = 1  # Minimum frequency of the water pump in Hz.
-MAX_PUMP_FREQUENCY = 5  # Maximum frequency of the water pump in Hz.
-PUMP_ON_TIME = 0.02  # Duration the pump is on during each pulse, in seconds.
-FAN_MAX_DUTY = 1023  # Maximum duty cycle for the fan's PWM signal.
 CONTROL_MAX_DELTA = 20  # Maximum temperature delta for control logic in C.
-EMERGENCY_STOP_TIMER = 600000  # Time before an emergency stop triggers a system reboot, in milliseconds.
+
+# ── Fan Control ──────────────────────────────────────
+FAN_RPM_SENSOR = False  # Using a hall effect sensor for fan RPM
+MIN_FAN_RPM = 2000  # Minimum fan RPM
+MAX_FAN_RPM = 5000  # Maximum fan RPM
+FAN_MAX_DUTY = 1023  # Maximum duty cycle for the fan's PWM signal
+# PWM scaling for non-linear fan behavior
+FAN_START_PERCENTAGE = 40  # Start percentage for scaling
+MIN_FAN_PERCENTAGE = 20  # Minimum fan speed as percentage of max speed
+MAX_FAN_PERCENTAGE = 80  # Maximum fan speed as percentage of max speed
+
+# ── Fuel Pump Control ───────────────────────────────
+MIN_PUMP_FREQUENCY = 1  # Minimum frequency of the water pump in Hz
+MAX_PUMP_FREQUENCY = 5  # Maximum frequency of the water pump in Hz
+PUMP_ON_TIME = 0.02  # Duration the pump is on during each pulse, in seconds
+
+# ── Emergency Handling ───────────────────────────────
+EMERGENCY_STOP_TIMER = 600000  # Time after emergency stop triggered until system reboot, in ms
+
 
 # ┌─────────────────────┐
 # │ Startup Settings    │
@@ -65,6 +74,7 @@ EMERGENCY_STOP_TIMER = 600000  # Time before an emergency stop triggers a system
 STARTUP_TIME_LIMIT = 300  # Maximum time allowed for startup, in seconds.
 GLOW_PLUG_HEAT_UP_TIME = 60  # Time for the glow plug to heat up, in seconds.
 INITIAL_FAN_SPEED_PERCENTAGE = 20  # Initial fan speed as a percentage of the maximum speed.
+# Note that the pump will be pulsed at MIN_PUMP_FREQUENCY also for the duration of initial startup.
 
 # ┌─────────────────────┐
 # │ Shutdown Settings   │

@@ -4,7 +4,7 @@ import config
 import utime
 from machine import Timer
 from states import stateMachine, emergencyStop
-from lib import sensors, networking
+from lib import sensors, networking, fanPID
 
 # Initialize the WDT with a 10-second timeout
 wdt = machine.WDT(id=0, timeout=10000)  # 10 seconds
@@ -86,9 +86,6 @@ def main():
             config.output_temp
         )
 
-        if config.FAN_RPM_SENSOR:
-            config.fan_rpm = sensors.get_fan_rpm()
-
         log(f"Current state: {config.current_state}")
         if config.emergency_reason:
             log(f"Emergency reason: {config.emergency_reason}")
@@ -101,4 +98,6 @@ if __name__ == "__main__":
     log(f"Reset/Boot Reason was: {boot_reason}")
     _thread.start_new_thread(emergency_stop_thread, ())
     _thread.start_new_thread(run_networking_thread, ())
+    if config.FAN_RPM_SENSOR:
+        _thread.start_new_thread(fanPID.fan_control_thread, ())
     main()
