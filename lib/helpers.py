@@ -17,7 +17,7 @@ def set_fan_percentage(speed_percentage):
             scaled_speed = 0
         else:
             # Ensure speed_percentage is within limits defined in config
-            speed_percentage = max(0, min(speed_percentage, 100))  # Limit to 0-100
+            speed_percentage = max(config.MIN_FAN_PERCENTAGE, min(speed_percentage, config.MAX_FAN_PERCENTAGE))  # Limit to 0-100
 
             # Scale the speed_percentage taking into account the FAN_START_PERCENTAGE
             scaled_speed = config.FAN_START_PERCENTAGE + (
