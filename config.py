@@ -81,6 +81,8 @@ MAX_PUMP_FREQUENCY = 5.0  # Maximum frequency of the water pump in Hz
 PUMP_ON_TIME = 0.02  # Duration the pump is on during each pulse, in seconds
 
 # ── Emergency Handling ───────────────────────────────
+FAILURE_STATE_RETRIES = 3  # How many times will we attempt a restart due to failed STARTING or
+# flame out when RUNNING. Different than EMERGENCY STOP, read below for some IMPORTANT considerations for this value.
 EMERGENCY_STOP_TIMER = 600000  # Time after emergency stop triggered until system reboot, in ms
 # Note that this needs more thought and could be DANGEROUS and/or could damage your heater. The
 # reason I included it is that sometimes things like gelled up diesel killing a fuel pump is better than

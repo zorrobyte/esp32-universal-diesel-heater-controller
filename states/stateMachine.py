@@ -26,7 +26,7 @@ def handle_state(current_state, switch_value, exhaust_temp, output_temp):
             return 'RUNNING', None
         else:
             config.startup_attempts += 1
-            if config.startup_attempts >= 3:
+            if config.startup_attempts >= config.FAILURE_STATE_RETRIES:
                 shutdown.shut_down()
                 return 'FAILURE', None
             return 'STARTING', None
