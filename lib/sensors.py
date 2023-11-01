@@ -19,7 +19,17 @@ def log(message, level=1):
         print(f"[Sensor] {message}")
 
 
-def read_temp(analog_value, sensor_type, sensor_beta):
+# Initialize an empty list to keep track of the last N temperature measurements for each sensor
+temp_history_output = []
+temp_history_exhaust = []
+
+# The number of past measurements to average
+TEMP_HISTORY_LENGTH = 3
+
+
+def read_temp(analog_value, sensor_type, sensor_beta, sensor_name="output"):
+    global temp_history_output, temp_history_exhaust
+
     try:
         if analog_value == 4095:
             log("Warning: ADC max value reached, can't calculate resistance")
@@ -42,7 +52,22 @@ def read_temp(analog_value, sensor_type, sensor_beta):
                 1 / T0 + (1 / BETA) * math.log(resistance / R0)
         )
 
-        return temperature_k - 273.15
+        temperature_c = temperature_k - 273.15
+
+        # Choose the history list based on the sensor name
+        history_list = temp_history_output if sensor_name == "output" else temp_history_exhaust
+
+        # Add the new temperature measurement to the history
+        history_list.append(temperature_c)
+
+        # Remove the oldest measurement if history is too long
+        if len(history_list) > TEMP_HISTORY_LENGTH:
+            history_list.pop(0)
+
+        # Calculate and return the average temperature
+        avg_temperature = sum(history_list) / len(history_list)
+        return avg_temperature
+
     except Exception as e:
         log(f"An error occurred while reading the temperature sensor: {e}")
         return 999
@@ -72,7 +97,8 @@ def read_output_temp():
         return read_temp(
             config.OUTPUT_TEMP_ADC.read(),
             config.OUTPUT_SENSOR_TYPE,
-            config.OUTPUT_SENSOR_BETA
+            config.OUTPUT_SENSOR_BETA,
+            sensor_name="output"
         )
 
 
@@ -93,7 +119,8 @@ def read_exhaust_temp():
         return read_temp(
             config.EXHAUST_TEMP_ADC.read(),
             config.EXHAUST_SENSOR_TYPE,
-            config.EXHAUST_SENSOR_BETA
+            config.EXHAUST_SENSOR_BETA,
+            sensor_name="exhaust"
         )
 
 
