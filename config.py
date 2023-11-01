@@ -1,14 +1,46 @@
+"""
+####################################################################
+#                          WARNING                                 #
+####################################################################
+# This code is provided "AS IS" without warranty of any kind.      #
+# Use of this code in any form acknowledges your acceptance of     #
+# these terms.                                                     #
+#                                                                  #
+# This code has NOT been tested in real-world scenarios.           #
+# Improper usage, lack of understanding, or any combination        #
+# thereof can result in significant property damage, injury,       #
+# loss of life, or worse.                                          #
+# Specifically, this code is related to controlling heating        #
+# elements and systems, and there's a very real risk that it       #
+# can BURN YOUR SHIT DOWN.                                         #
+#                                                                  #
+# By using, distributing, or even reading this code, you agree     #
+# to assume all responsibility and risk associated with it.        #
+# The author(s), contributors, and distributors of this code       #
+# will NOT be held liable for any damages, injuries, or other      #
+# consequences you may face as a result of using or attempting     #
+# to use this code.                                                #
+#                                                                  #
+# Always approach such systems with caution. Ensure you understand #
+# the code, the systems involved, and the potential risks.         #
+# If you're unsure, DO NOT use the code.                           #
+#                                                                  #
+# Stay safe and think before you act.                              #
+####################################################################
+"""
+
 import machine
 import utime
 
 # ┌─────────────────────┐
 # │ General Settings    │
 # └─────────────────────┘
-USE_WIFI = False  # Enable or disable Wi-Fi functionality.
-USE_MQTT = False  # Enable or disable MQTT functionality.
-IS_WATER_HEATER = False  # Set to True if this device is controlling a water or coolant heater.
-HAS_SECOND_PUMP = False  # Set to True if there is a secondary water pump in the system.
+USE_WIFI = False  # Enable or disable Wi-Fi functionality
+USE_MQTT = False  # Enable or disable MQTT functionality
+IS_WATER_HEATER = False  # Set to True if this device is controlling a water or coolant heater
+HAS_SECOND_PUMP = False  # Set to True if there is a secondary water pump in the system
 IS_SIMULATION = False  # Set to True if you wish to simulate without sensors, etc connected
+# Useful if developing on an ESP32 without anything hooked up
 
 # ┌─────────────────────┐
 # │ Network Settings    │
@@ -28,8 +60,8 @@ COMMAND_TOPIC = 'command'  # Topic to receive commands like "start" and "stop"
 # ┌─────────────────────┐
 # │ Safety Limits       │
 # └─────────────────────┘
-EXHAUST_SAFE_TEMP = 160  # Max safe temperature for exhaust in C.
-OUTPUT_SAFE_TEMP = 90  # Max safe temperature for output in C.
+EXHAUST_SAFE_TEMP = 160  # Max safe temperature for exhaust in C
+OUTPUT_SAFE_TEMP = 90  # Max safe temperature for output in C
 
 # ┌─────────────────────┐
 # │ Sensor Settings     │
@@ -38,17 +70,21 @@ OUTPUT_SAFE_TEMP = 90  # Max safe temperature for output in C.
 # Available options: 'NTC_10k', 'NTC_50k', 'NTC_100k', 'PTC_500', 'PTC_1k', 'PTC_2.3k'
 # Remember to use a matching resistor in your voltage divider, we assume it is for calculations
 OUTPUT_SENSOR_TYPE = 'NTC_50k'
-OUTPUT_SENSOR_BETA = 3950  # BETA value for the output temperature sensor, typically found in the datasheet.
+OUTPUT_SENSOR_BETA = 3950  # BETA value for the output temperature sensor, typically found in the datasheet
 EXHAUST_SENSOR_TYPE = 'PTC_1k'
-EXHAUST_SENSOR_BETA = 3000  # BETA value for the exhaust temperature sensor, typically found in the datasheet.
+EXHAUST_SENSOR_BETA = 3000  # BETA value for the exhaust temperature sensor, typically found in the datasheet
 
 # ┌─────────────────────┐
 # │ Device Control      │
 # └─────────────────────┘
 
 # ── Temperature Control ──────────────────────────────
-TARGET_TEMP = 22.0  # Target temperature to maintain in C.
-CONTROL_MAX_DELTA = 20  # Maximum temperature delta for control logic in C.
+TARGET_TEMP = 22.0  # Target temperature to maintain in C
+CONTROL_MAX_DELTA = 20  # Maximum temperature delta for control logic in C
+# This basically is at what +/- error we are trying to solve. So if TARGET_TEMP is at 20c
+# and the temp sensor is at 10C, run at full speed. Temp sensor 10C over TARGET_TEMP, min speed.
+# If temp sensor is at 20C and TARGET_TEMP is at 20C, run at 50% air and fuel. It linearly scales.
+# You may need to adjust this if it seems you never get to TARGET_TEMP or frequently overshoot it.
 
 # ── Fan Control ──────────────────────────────────────
 FAN_RPM_SENSOR = False  # If using a hall effect sensor for fan RPM (recommended)
@@ -61,19 +97,23 @@ FAN_RPM_SENSOR = False  # If using a hall effect sensor for fan RPM (recommended
 # since the fan may pull 10Amps+! Note that non-RPM based control is inherently
 # more dangerous than RPM control as if the fan stops or gets slower over time
 # (due to dust in bearing, etc), no one will know and can cause nasty things like
-# massive CO2 production due to improper air/fuel or even a fire
+# massive CO2 production due to improper air/fuel ratio or even a fire
 MIN_FAN_RPM = 2000  # Minimum fan RPM
 MAX_FAN_RPM = 5000  # Maximum fan RPM
 FAN_MAX_DUTY = 1023  # Maximum duty cycle for the fan's PWM signal
-# PWM scaling for non-linear fan behavior
+
 if FAN_RPM_SENSOR:
     FAN_START_PERCENTAGE = 0  # Not used in RPM mode
-    MIN_FAN_PERCENTAGE = 1  # Don't change
-    MAX_FAN_PERCENTAGE = 100  # Don't change
+    MIN_FAN_PERCENTAGE = 0  # Not used in RPM mode
+    MAX_FAN_PERCENTAGE = 0  # Not used in RPM mode
 else:
+    # PWM scaling for observed non-linear fan behavior
     FAN_START_PERCENTAGE = 40  # Start percentage for scaling
     MIN_FAN_PERCENTAGE = 20  # Minimum fan speed as percentage of max speed
-    MAX_FAN_PERCENTAGE = 80  # Maximum fan speed as percentage of max speed
+    MAX_FAN_PERCENTAGE = 60  # Maximum fan speed as percentage of max speed
+    # Again (see above) note that 100% is VERY FAST, like FASTER THAN YOU'VE EVER SEEN YOUR HEATER
+    # SPIN and can draw 10+Amps that can caused smoked components and melted wires
+    # Test lower values first
 
 # ── Fuel Pump Control ───────────────────────────────
 MIN_PUMP_FREQUENCY = 1.0  # Minimum frequency of the water pump in Hz
@@ -81,6 +121,8 @@ MAX_PUMP_FREQUENCY = 5.0  # Maximum frequency of the water pump in Hz
 PUMP_ON_TIME = 0.02  # Duration the pump is on during each pulse, in seconds
 
 # ── Emergency Handling ───────────────────────────────
+FAILURE_STATE_RETRIES = 3  # How many times will we attempt a restart due to failed STARTING or
+# flame out when RUNNING. Different from EMERGENCY STOP, read below for some IMPORTANT considerations for this value.
 EMERGENCY_STOP_TIMER = 600000  # Time after emergency stop triggered until system reboot, in ms
 # Note that this needs more thought and could be DANGEROUS and/or could damage your heater. The
 # reason I included it is that sometimes things like gelled up diesel killing a fuel pump is better than
@@ -101,8 +143,8 @@ EMERGENCY_STOP_TIMER = 600000  # Time after emergency stop triggered until syste
 # ┌─────────────────────┐
 # │ Startup Settings    │
 # └─────────────────────┘
-STARTUP_TIME_LIMIT = 300  # Maximum time allowed for startup, in seconds.
-GLOW_PLUG_HEAT_UP_TIME = 60  # Time for the glow plug to heat up, in seconds.
+STARTUP_TIME_LIMIT = 300  # Maximum time allowed for startup, in seconds
+GLOW_PLUG_HEAT_UP_TIME = 60  # Time for the glow plug to heat up, in seconds
 INITIAL_FAN_SPEED_PERCENTAGE = 20  # Initial fan speed as a percentage of the maximum speed.
 # Note that the pump will be pulsed at MIN_PUMP_FREQUENCY also for the duration of initial startup.
 # So the default here is 1hz/20% fan speed
@@ -110,9 +152,9 @@ INITIAL_FAN_SPEED_PERCENTAGE = 20  # Initial fan speed as a percentage of the ma
 # ┌─────────────────────┐
 # │ Shutdown Settings   │
 # └─────────────────────┘
-SHUTDOWN_TIME_LIMIT = 300  # Maximum time allowed for shutdown, in seconds Exceeding this puts us in an EMERGENCY state.
-COOLDOWN_MIN_TIME = 30  # Minimum time for the system to cool down, in seconds, regardless of temperature.
-EXHAUST_SHUTDOWN_TEMP = 40.0  # Temperature at which we consider the heater cooled down in C.
+SHUTDOWN_TIME_LIMIT = 300  # Maximum time allowed for shutdown, in seconds Exceeding this puts us in an EMERGENCY state
+COOLDOWN_MIN_TIME = 30  # Minimum time for the system to cool down, in seconds, regardless of temperature
+EXHAUST_SHUTDOWN_TEMP = 40.0  # Temperature at which we consider the heater cooled down in C
 
 # ┌─────────────────────┐
 # │ Flame-out Detection │
@@ -130,12 +172,12 @@ MIN_TEMP_DELTA = 2.0
 # ┌─────────────────────┐
 # │ Logging Level       │
 # └─────────────────────┘
-LOG_LEVEL = 3  # Logging level: 0 for None, 1 for Errors, 2 for Info, 3 for Debug.
+LOG_LEVEL = 3  # Logging level: 0 for None, 1 for Errors, 2 for Info, 3 for Debug
 
 # ┌─────────────────────┐
 # │ Global Variables    │
 # └─────────────────────┘
-# These are global variables used in the program.
+# These are global variables used in the program
 pump_frequency = 0
 startup_attempts = 0
 startup_successful = True
@@ -151,8 +193,8 @@ fan_rpm = 0
 # │ Pin Assignments     │
 # └─────────────────────┘
 
-# Note: Be cautious when using ESP32 strapping pins for your components.
-# Strapping pins are: GPIO 0, 2, 4, 5, 12, 15.
+# Note: Be cautious when using ESP32 strapping pins for your components
+# Strapping pins are: GPIO 0, 2, 4, 5, 12, 15
 
 # ── Fuel Control ───────────────────────
 # Strapping Pin: GPIO 5
@@ -162,7 +204,7 @@ FUEL_PIN.off()  # Initialize to OFF
 # ── Air Control ────────────────────────
 AIR_PIN = machine.Pin(23, machine.Pin.OUT)
 air_pwm = machine.PWM(AIR_PIN)
-air_pwm.freq(1000)
+air_pwm.freq(15000)
 air_pwm.duty(0)  # Initialize to OFF
 
 # ── Glow Plug Control ──────────────────
