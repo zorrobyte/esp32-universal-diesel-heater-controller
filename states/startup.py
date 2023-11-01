@@ -29,7 +29,6 @@ def start_up():
 
         if current_time - startup_start_time > startup_time_limit:
             state_message("TIMEOUT", "Startup took too long. Changing state to STOPPING.")
-            shutdown.shut_down()
             config.startup_successful = False
             return
 
@@ -39,7 +38,6 @@ def start_up():
             initial_exhaust_temp = config.exhaust_temp
             if initial_exhaust_temp > 100:
                 state_message(state, "Initial exhaust temperature too high. Stopping...")
-                shutdown.shut_down()
                 config.startup_successful = False
                 return
             helpers.set_fan_percentage(config.FAN_START_PERCENTAGE)
