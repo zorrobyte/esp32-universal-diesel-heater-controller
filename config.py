@@ -36,6 +36,7 @@ OUTPUT_SAFE_TEMP = 90  # Max safe temperature for output in C.
 # └─────────────────────┘
 # Specify the type of thermistor used for measuring temperatures.
 # Available options: 'NTC_10k', 'NTC_50k', 'NTC_100k', 'PTC_500', 'PTC_1k', 'PTC_2.3k'
+# Remember to use a matching resistor in your voltage divider, we assume it is for calculations
 OUTPUT_SENSOR_TYPE = 'NTC_50k'
 OUTPUT_SENSOR_BETA = 3950  # BETA value for the output temperature sensor, typically found in the datasheet.
 EXHAUST_SENSOR_TYPE = 'PTC_1k'
@@ -50,18 +51,30 @@ TARGET_TEMP = 60.0  # Target temperature to maintain in C.
 CONTROL_MAX_DELTA = 20  # Maximum temperature delta for control logic in C.
 
 # ── Fan Control ──────────────────────────────────────
-FAN_RPM_SENSOR = False  # Using a hall effect sensor for fan RPM
+FAN_RPM_SENSOR = False  # If using a hall effect sensor for fan RPM (recommended)
+# Else, you can use "dumb" non-feedback fan control based on percentage of
+# maximum PWM cycle by guessing values. Note that 100% on percentage mode (non-RPM) is
+# VERY FAST, faster than your heater has run ever likely, and can smoke wires, etc
+# since the fan may pull 10Amps+! Note that non-RPM based control is inherently
+# more dangerous than RPM control as if the fan stops or gets slower over time
+# (due to dust in bearing, etc), no one will know and can cause nasty things like
+# massive CO2 production due to improper air/fuel or even a fire
 MIN_FAN_RPM = 2000  # Minimum fan RPM
 MAX_FAN_RPM = 5000  # Maximum fan RPM
 FAN_MAX_DUTY = 1023  # Maximum duty cycle for the fan's PWM signal
 # PWM scaling for non-linear fan behavior
-FAN_START_PERCENTAGE = 40  # Start percentage for scaling
-MIN_FAN_PERCENTAGE = 20  # Minimum fan speed as percentage of max speed
-MAX_FAN_PERCENTAGE = 80  # Maximum fan speed as percentage of max speed
+if FAN_RPM_SENSOR:
+    FAN_START_PERCENTAGE = 0  # Not used in RPM mode
+    MIN_FAN_PERCENTAGE = 1  # Don't change
+    MAX_FAN_PERCENTAGE = 100  # Don't change
+else:
+    FAN_START_PERCENTAGE = 40  # Start percentage for scaling
+    MIN_FAN_PERCENTAGE = 20  # Minimum fan speed as percentage of max speed
+    MAX_FAN_PERCENTAGE = 80  # Maximum fan speed as percentage of max speed
 
 # ── Fuel Pump Control ───────────────────────────────
-MIN_PUMP_FREQUENCY = 1  # Minimum frequency of the water pump in Hz
-MAX_PUMP_FREQUENCY = 5  # Maximum frequency of the water pump in Hz
+MIN_PUMP_FREQUENCY = 1.0  # Minimum frequency of the water pump in Hz
+MAX_PUMP_FREQUENCY = 5.0  # Maximum frequency of the water pump in Hz
 PUMP_ON_TIME = 0.02  # Duration the pump is on during each pulse, in seconds
 
 # ── Emergency Handling ───────────────────────────────
