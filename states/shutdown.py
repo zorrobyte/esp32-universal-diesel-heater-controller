@@ -1,3 +1,34 @@
+"""
+####################################################################
+#                          WARNING                                 #
+####################################################################
+# This code is provided "AS IS" without warranty of any kind.      #
+# Use of this code in any form acknowledges your acceptance of     #
+# these terms.                                                     #
+#                                                                  #
+# This code has NOT been tested in real-world scenarios.           #
+# Improper usage, lack of understanding, or any combination        #
+# thereof can result in significant property damage, injury,       #
+# loss of life, or worse.                                          #
+# Specifically, this code is related to controlling heating        #
+# elements and systems, and there's a very real risk that it       #
+# can BURN YOUR SHIT DOWN.                                         #
+#                                                                  #
+# By using, distributing, or even reading this code, you agree     #
+# to assume all responsibility and risk associated with it.        #
+# The author(s), contributors, and distributors of this code       #
+# will NOT be held liable for any damages, injuries, or other      #
+# consequences you may face as a result of using or attempting     #
+# to use this code.                                                #
+#                                                                  #
+# Always approach such systems with caution. Ensure you understand #
+# the code, the systems involved, and the potential risks.         #
+# If you're unsure, DO NOT use the code.                           #
+#                                                                  #
+# Stay safe and think before you act.                              #
+####################################################################
+"""
+
 import config
 import utime
 from lib import helpers
