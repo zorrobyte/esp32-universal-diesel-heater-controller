@@ -1,5 +1,5 @@
 import config
-from logic import startup, shutdown, control
+from states import startup, shutdown, control
 
 
 def log(message, level=2):

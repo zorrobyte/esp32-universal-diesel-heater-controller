@@ -1,7 +1,7 @@
 import config
 import utime
 import main
-from logic import shutdown
+from stateMachine import shutdown
 from lib import helpers
 
 
