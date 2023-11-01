@@ -45,8 +45,12 @@ EXHAUST_SENSOR_BETA = 3000  # BETA value for the exhaust temperature sensor, typ
 # │ Device Control      │
 # └─────────────────────┘
 TARGET_TEMP = 60.0  # Target temperature to maintain in C.
+FAN_START_PERCENTAGE = 40  # Since fan PWM is non-linear, we scale fan MIN/MAX by this minimum.
+                           # Basically, enter the lowest percentage of full PWM your fan spins.
 MIN_FAN_PERCENTAGE = 20  # Minimum fan speed as a percentage of the maximum speed.
-MAX_FAN_PERCENTAGE = 100  # Maximum fan speed as a percentage of the maximum speed.
+                         # NOTE 0% fan speed is truly 0% fan speed. 1% will be FAN_START_PERCENTAGE, etc.
+MAX_FAN_PERCENTAGE = 80  # Maximum fan speed as a percentage of the maximum speed.
+                         # Note that 100% is very fast, possibly over 10Amps!
 MIN_PUMP_FREQUENCY = 1  # Minimum frequency of the water pump in Hz.
 MAX_PUMP_FREQUENCY = 5  # Maximum frequency of the water pump in Hz.
 PUMP_ON_TIME = 0.02  # Duration the pump is on during each pulse, in seconds.
@@ -135,4 +139,3 @@ EXHAUST_TEMP_ADC.atten(machine.ADC.ATTN_11DB)
 air_pwm = machine.PWM(AIR_PIN)
 air_pwm.freq(1000)
 air_pwm.duty(0)  # Ensure is initialized to OFF when booting, just in case
-

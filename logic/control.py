@@ -1,4 +1,5 @@
 import config
+from lib import helpers
 
 # Initialize a list to store the last N exhaust temperatures
 exhaust_temp_history = []
@@ -7,13 +8,6 @@ exhaust_temp_history = []
 def log(message, level=1):
     if config.LOG_LEVEL >= level:
         print(f"[Control] {message}")
-
-
-def calculate_fan_duty(target_temp, output_temp, max_delta, max_duty, min_percentage, max_percentage):
-    delta = target_temp - output_temp
-    config.fan_speed_percentage = min(max((delta / max_delta) * 100, min_percentage), max_percentage)
-    fan_duty = int((config.fan_speed_percentage / 100) * max_duty)
-    return fan_duty, config.fan_speed_percentage
 
 
 def calculate_pump_frequency(target_temp, output_temp, max_delta, max_frequency, min_frequency):
@@ -39,10 +33,13 @@ def control_air_and_fuel(output_temp, exhaust_temp):
             log("Flame out detected based on decreasing exhaust temperature. Exiting...", level=0)
             return "FLAME_OUT"
 
-    fan_duty, config.fan_speed_percentage = calculate_fan_duty(
-        config.TARGET_TEMP, output_temp, config.CONTROL_MAX_DELTA,
-        config.FAN_MAX_DUTY, config.MIN_FAN_PERCENTAGE, config.MAX_FAN_PERCENTAGE
-    )
+    # Calculate the fan speed percentage based on temperature delta
+    delta = config.TARGET_TEMP - output_temp
+    config.fan_speed_percentage = min(max((delta / config.CONTROL_MAX_DELTA) * 100, config.MIN_FAN_PERCENTAGE),
+                                      config.MAX_FAN_PERCENTAGE)
+
+    # Use the helper function to set the fan speed
+    helpers.set_fan_percentage(config.fan_speed_percentage)
 
     pump_frequency = calculate_pump_frequency(
         config.TARGET_TEMP, output_temp, config.CONTROL_MAX_DELTA,
@@ -50,7 +47,6 @@ def control_air_and_fuel(output_temp, exhaust_temp):
     )
 
     # Update global variables
-    config.air_pwm.duty(fan_duty)
     config.pump_frequency = pump_frequency
 
     log(f"Fan speed: {config.fan_speed_percentage}%, Pump frequency: {pump_frequency} Hz, Exhaust Temp: {config.exhaust_temp}, Output Temp: {config.output_temp}")

@@ -2,6 +2,7 @@ import config
 import utime
 import main
 from logic import tempSensors, shutdown
+from lib import helpers
 
 
 def state_message(state, message):
@@ -13,7 +14,6 @@ def start_up():
     step = 1
     exhaust_temps = []
     initial_exhaust_temp = None
-    config.fan_speed_percentage = 20
     last_time_checked = utime.time()
     if config.IS_SIMULATION:
         glow_plug_heat_up_end_time = last_time_checked + 1
@@ -29,6 +29,7 @@ def start_up():
 
         if current_time - startup_start_time > startup_time_limit:
             state_message("TIMEOUT", "Startup took too long. Changing state to STOPPING.")
+            shutdown.shut_down()
             config.startup_successful = False
             return
 
@@ -41,8 +42,7 @@ def start_up():
                 shutdown.shut_down()
                 config.startup_successful = False
                 return
-            fan_duty = int((config.fan_speed_percentage / 100) * 1023)
-            config.air_pwm.duty(fan_duty)
+            helpers.set_fan_percentage(config.FAN_START_PERCENTAGE)
             config.GLOW_PIN.on()
             if config.IS_WATER_HEATER:
                 config.WATER_PIN.on()
@@ -78,8 +78,7 @@ def start_up():
 
                     elif initial_exhaust_temp + 5 < avg_exhaust_temp:
                         config.fan_speed_percentage = min(config.fan_speed_percentage + 20, 100)
-                        fan_duty = int((config.fan_speed_percentage / 100) * 1023)
-                        config.air_pwm.duty(fan_duty)
+                        helpers.set_fan_percentage(config.fan_speed_percentage)
                         config.pump_frequency = min(config.pump_frequency + 1, 5)
                         state_message(state,
                                       f"Step {step} successful. Fan: {config.fan_speed_percentage}%, Fuel Pump: {config.pump_frequency} Hz")

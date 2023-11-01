@@ -1,6 +1,7 @@
 import config
 import utime
 from logic import tempSensors
+from lib import helpers
 
 
 def log(message, level=2):
@@ -30,7 +31,7 @@ def shut_down():
         elif step == 1:
             if cooldown_start_time is None:
                 log("Activating glow plug and fan for purging and cooling...")
-                config.air_pwm.duty(config.FAN_MAX_DUTY)
+                helpers.set_fan_percentage(config.MAX_FAN_PERCENTAGE)
                 config.GLOW_PIN.on()
                 cooldown_start_time = utime.time()
 
@@ -45,7 +46,7 @@ def shut_down():
 
         elif step == 2:
             log("Turning off electrical components...")
-            config.air_pwm.duty(0)
+            helpers.set_fan_percentage(0)
             config.GLOW_PIN.off()
             if config.IS_WATER_HEATER:
                 config.WATER_PIN.off()
