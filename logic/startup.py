@@ -1,7 +1,7 @@
 import config
 import utime
 import main
-from logic import tempSensors
+from logic import tempSensors, shutdown
 
 
 def state_message(state, message):
@@ -37,7 +37,8 @@ def start_up():
             config.startup_successful = False  # Assume startup will fail
             initial_exhaust_temp = tempSensors.read_exhaust_temp()
             if initial_exhaust_temp > 100:
-                state_message(state, "Initial exhaust temperature too high. Changing state to STOPPING.")
+                state_message(state, "Initial exhaust temperature too high. Stopping...")
+                shutdown.shut_down()
                 config.startup_successful = False
                 return
             fan_duty = int((config.fan_speed_percentage / 100) * 1023)
