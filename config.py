@@ -83,7 +83,8 @@ TARGET_TEMP = 22.0  # Target temperature to maintain in C
 CONTROL_MAX_DELTA = 20  # Maximum temperature delta for control logic in C
 # This basically is at what +/- error we are trying to solve. So if TARGET_TEMP is at 20c
 # and the temp sensor is at 10C, run at full speed. Temp sensor 10C over TARGET_TEMP, min speed.
-# You may need to adjust this if it seems you never get to TARGET_TEMP or frequently overshoot it
+# If temp sensor is at 20C and TARGET_TEMP is at 20C, run at 50% air and fuel. It linearly scales.
+# You may need to adjust this if it seems you never get to TARGET_TEMP or frequently overshoot it.
 
 # ── Fan Control ──────────────────────────────────────
 FAN_RPM_SENSOR = False  # If using a hall effect sensor for fan RPM (recommended)
@@ -109,9 +110,9 @@ else:
     # PWM scaling for observed non-linear fan behavior
     FAN_START_PERCENTAGE = 40  # Start percentage for scaling
     MIN_FAN_PERCENTAGE = 20  # Minimum fan speed as percentage of max speed
-    MAX_FAN_PERCENTAGE = 80  # Maximum fan speed as percentage of max speed
-    # Note that 100% is VERY FAST, like FASTER THAN YOU'VE EVER SEEN YOUR HEATER
-    # SPIN and can draw 10+Amps that can caused smoked componets and melted wires
+    MAX_FAN_PERCENTAGE = 60  # Maximum fan speed as percentage of max speed
+    # Again (see above) note that 100% is VERY FAST, like FASTER THAN YOU'VE EVER SEEN YOUR HEATER
+    # SPIN and can draw 10+Amps that can caused smoked components and melted wires
     # Test lower values first
 
 # ── Fuel Pump Control ───────────────────────────────
@@ -121,7 +122,7 @@ PUMP_ON_TIME = 0.02  # Duration the pump is on during each pulse, in seconds
 
 # ── Emergency Handling ───────────────────────────────
 FAILURE_STATE_RETRIES = 3  # How many times will we attempt a restart due to failed STARTING or
-# flame out when RUNNING. Different than EMERGENCY STOP, read below for some IMPORTANT considerations for this value.
+# flame out when RUNNING. Different from EMERGENCY STOP, read below for some IMPORTANT considerations for this value.
 EMERGENCY_STOP_TIMER = 600000  # Time after emergency stop triggered until system reboot, in ms
 # Note that this needs more thought and could be DANGEROUS and/or could damage your heater. The
 # reason I included it is that sometimes things like gelled up diesel killing a fuel pump is better than
@@ -203,7 +204,7 @@ FUEL_PIN.off()  # Initialize to OFF
 # ── Air Control ────────────────────────
 AIR_PIN = machine.Pin(23, machine.Pin.OUT)
 air_pwm = machine.PWM(AIR_PIN)
-air_pwm.freq(1000)
+air_pwm.freq(15000)
 air_pwm.duty(0)  # Initialize to OFF
 
 # ── Glow Plug Control ──────────────────
