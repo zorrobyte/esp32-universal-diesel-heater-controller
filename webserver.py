@@ -1,7 +1,7 @@
 import network
 import socket
-import re
 import machine
+import ure
 
 # 1. Set the ESP32 to work as an Access Point:
 
@@ -36,12 +36,15 @@ HTML_PAGE = """
 def read_config_params():
     params = {}
     with open('config.py', 'r') as f:
+        print("Reading config.py")  # To check if the file is being read
         for line in f:
-            match = re.match(r'(\w+)\s*=\s*(.*)', line)
+            # Match uppercase keys followed by an equal sign, and capture the value up to a comment or end of line
+            match = ure.match(r'([A-Z_]+)\s*=\s*([^#]*)', line)
             if match:
-                key, value = match.groups()
-                if key.isupper():
-                    params[key] = value.strip()
+                key = match.group(1)
+                value = match.group(2).strip()
+                print("Matched key:", key)  # Printing each key we match
+                params[key] = value
     return params
 
 
@@ -60,28 +63,42 @@ def generate_html_page(params):
 # Handle the POST data and modify the config.py file
 def handle_post_data(data):
     params = read_config_params()
-    # Parse the POST data using regex
-    for key in params.keys():
-        match = re.search(r'{}=(\w+)'.format(key), data)
-        if match:
-            value = match.group(1)
+    post_params = {}
+
+    # MicroPython's ure doesn't have findall so we split the data and iterate through
+    lines = data.split('&')
+    for line in lines:
+        key_value = line.split('=')
+        if len(key_value) == 2:
+            key, value = key_value
             if value == 'on':
                 value = 'True'
             elif value == 'off':
                 value = 'False'
-            params[key] = value
+            post_params[key] = value
 
-    # Update config.py with modified values
-    with open('config.py', 'r') as f:
-        lines = f.readlines()
+    # Create a set of updated keys
+    updated_keys = set(post_params.keys())
 
-    with open('config.py', 'w') as f:
+    # Read the current lines from the file
+    with open('config.py', 'r') as file:
+        lines = file.readlines()
+
+    # Update the lines with the new values from the POST data
+    with open('config.py', 'w') as file:
         for line in lines:
-            match = re.match(r'(\w+)\s*=\s*(.*)', line)
-            if match and match.group(1) in params:
-                f.write("{} = {}\n".format(match.group(1), params[match.group(1)]))
-            else:
-                f.write(line)
+            match = ure.match(r'([A-Z_]+)\s*=\s*([^#]*)', line)
+            if match:
+                key = match.group(1)
+                if key in updated_keys:
+                    # Replace the line with the new value
+                    line = f"{key} = {post_params[key]}\n"
+            file.write(line)
+
+    # Check for any keys that are in the config file but weren't in the POST data
+    missing_keys = set(params.keys()) - updated_keys
+    if missing_keys:
+        print(f"Warning: The following keys were not updated because they were not in the POST data: {missing_keys}")
 
 
 # Web server function
