@@ -1,4 +1,4 @@
-# ESP32 Heater Controller
+# ZorroHeater Project
 
 This project provides a controller for a heater system based on the ESP32 platform on MicroPython. It uses MQTT for remote communication, allowing the user to set the desired temperature and receive sensor readings. The controller also has an attempt at safety measures to ensure the system operates within safe temperature ranges, but could still lead to injury, death, property damage, divorce, and other horrible things.
 
