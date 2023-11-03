@@ -43,7 +43,8 @@ def rpm_interrupt_handler(pin):
 
 
 # Initialize the interrupt for the Hall Effect Sensor
-config.FAN_RPM_PIN.irq(trigger=machine.Pin.IRQ_RISING, handler=rpm_interrupt_handler)
+if config.FAN_RPM_SENSOR:
+    config.FAN_RPM_PIN.irq(trigger=machine.Pin.IRQ_RISING, handler=rpm_interrupt_handler)
 
 
 class PIDController:
