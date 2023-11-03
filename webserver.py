@@ -1,104 +1,188 @@
 import network
 import socket
 import machine
-import ure
+import json
+import utime
 
-# 1. Set the ESP32 to work as an Access Point:
+
+def unquote_plus(string):
+    # Replace '+' with ' ' and decode percent-encoded characters
+    string = string.replace('+', ' ')
+    parts = string.split('%')
+    if len(parts) > 1:
+        string = parts[0]
+        for item in parts[1:]:
+            try:
+                if len(item) >= 2:
+                    string += chr(int(item[:2], 16)) + item[2:]
+                else:
+                    string += '%' + item
+            except ValueError:
+                string += '%' + item
+    return string
+
+
+# Define HTML escape function
+def escape_html(text):
+    html_escape_table = {
+        "&": "&amp;",
+        '"': "&quot;",
+        "'": "&apos;",
+        ">": "&gt;",
+        "<": "&lt;",
+    }
+    return "".join(html_escape_table.get(c, c) for c in text)
+
 
 # Configure Access Point
 ap = network.WLAN(network.AP_IF)
 ap.active(True)
 ap.config(essid='esp32-diesel-ecu', password='794759876')
 
-# Define HTML page template
+# HTML page template
 HTML_PAGE = """
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ESP32 Configuration</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f7f7f7;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        form {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        input[type="text"], input[type="password"], input[type="number"], select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        input[type="submit"] {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        input[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+        .restart-btn {
+            background-color: #dc3545;
+        }
+        .restart-btn:hover {
+            background-color: #c82333;
+        }
+    </style>
 </head>
 <body>
-    <h1>ESP32 Configuration</h1>
-    <form action="/set" method="post">
-        {}
-        <input type="submit" value="Save">
-    </form>
-    <form action="/restart" method="post"> <!-- Added restart form -->
-        <input type="submit" value="Restart ESP32">
-    </form>
+    <div class="container">
+        <h1>ESP32 Configuration</h1>
+        <form action="/set" method="post">
+            {} <!-- Form fields will be injected here -->
+            <input type="submit" value="Save">
+        </form>
+        <form action="/restart" method="post">
+            <input type="submit" value="Restart ESP32" class="restart-btn">
+        </form>
+    </div>
 </body>
 </html>
 """
 
 
-# 2. Implement functions to handle the web server:
-
-# Read the config.py file and identify lines with uppercase parameters
+# Read config.json and return as dictionary
 def read_config_params():
-    params = {}
-    with open('config.py', 'r') as f:
-        print("Reading config.py")  # To check if the file is being read
-        for line in f:
-            # Match uppercase keys followed by an equal sign, and capture the value up to a comment or end of line
-            match = ure.match(r'([A-Z_]+)\s*=\s*([^#]*)', line)
-            if match:
-                key = match.group(1)
-                value = match.group(2).strip()
-                print("Matched key:", key)  # Printing each key we match
-                params[key] = value
-    return params
+    try:
+        with open('config.json', 'r') as f:
+            return json.load(f)
+    except OSError:
+        return {}
 
 
-# Generate the HTML page dynamically based on the parameters from config.py
+# Generate HTML page based on config.json
 def generate_html_page(params):
     input_fields = ""
-    for key, value in params.items():
-        if value.lower() == 'true' or value.lower() == 'false':
-            checked = 'checked' if value.lower() == 'true' else ''
-            input_fields += '{}: <input type="checkbox" name="{}" {}><br>'.format(key, key, checked)
-        else:
-            input_fields += '{}: <input type="text" name="{}" value="{}"><br>'.format(key, key, value)
+    for section, settings in params.items():
+        input_fields += f"<h2>{escape_html(section)}</h2>"
+        for key, value in settings.items():
+            safe_key = escape_html(key)
+            safe_value = escape_html(str(value))
+            input_fields += f'{safe_key}: <input type="text" name="{section}.{safe_key}" value="{safe_value}"><br>'
     return HTML_PAGE.format(input_fields)
 
 
-# Handle the POST data and modify the config.py file
+# Custom pretty-print function for JSON-like dictionaries
+def pretty_print_json(data, indent=4, level=0):
+    if not isinstance(data, dict):  # if the data is not a dictionary, just return it as a string
+        return str(data)
+    items = []
+    for key, value in data.items():
+        items.append(' ' * (level * indent) + f'"{key}": ' + (
+            pretty_print_json(value, indent, level + 1) if isinstance(value, dict) else json.dumps(value)))
+    return "{\n" + ",\n".join(items) + "\n" + ' ' * (level - 1) * indent + "}"
+
+
+# Handle POST data and update config.json
 def handle_post_data(data):
     params = read_config_params()
-    post_params = {}
 
-    # MicroPython's ure doesn't have findall so we split the data and iterate through
+    # Parse POST data
     lines = data.split('&')
     for line in lines:
-        key_value = line.split('=')
-        if len(key_value) == 2:
-            key, value = key_value
-            if value == 'on':
-                value = 'True'
-            elif value == 'off':
-                value = 'False'
-            post_params[key] = value
+        section_key_value = line.split('=')
+        if len(section_key_value) == 2:
+            section_key, value = map(unquote_plus, section_key_value)
+            section, key = section_key.split('.')
+            if value.lower() in ('true', 'on'):
+                value = True
+            elif value.lower() == 'off':
+                value = False
+            else:
+                try:
+                    value = float(value) if '.' in value else int(value)
+                except ValueError:
+                    pass  # If not a number, leave as string
+            if section in params and key in params[section]:
+                params[section][key] = value
 
-    # Create a set of updated keys
-    updated_keys = set(post_params.keys())
-
-    # Read the current lines from the file
-    with open('config.py', 'r') as file:
-        lines = file.readlines()
-
-    # Update the lines with the new values from the POST data
-    with open('config.py', 'w') as file:
-        for line in lines:
-            match = ure.match(r'([A-Z_]+)\s*=\s*([^#]*)', line)
-            if match:
-                key = match.group(1)
-                if key in updated_keys:
-                    # Replace the line with the new value
-                    line = f"{key} = {post_params[key]}\n"
-            file.write(line)
-
-    # Check for any keys that are in the config file but weren't in the POST data
-    missing_keys = set(params.keys()) - updated_keys
-    if missing_keys:
-        print(f"Warning: The following keys were not updated because they were not in the POST data: {missing_keys}")
+    # Write updated parameters back to config.json with custom pretty-printing
+    with open('config.json', 'w') as f:
+        f.write(pretty_print_json(params))
 
 
 # Web server function
@@ -111,21 +195,18 @@ def web_server():
     while True:
         conn, addr = s.accept()
         request = conn.recv(1024)
-        request = str(request, 'utf-8')
+        request_str = str(request, 'utf-8')
 
-        if request.startswith('POST'):
-            if "/restart" in request:  # <-- Handle restart request
-                response = "HTTP/1.1 200 OK\r\n\r\nRestarting..."
-                conn.sendall(response.encode('utf-8'))
+        if request_str.startswith('POST'):
+            post_data = request_str.split('\r\n\r\n')[-1]
+            if "/restart" in request_str:
+                conn.sendall("HTTP/1.1 200 OK\r\n\r\nRestarting...".encode('utf-8'))
                 conn.close()
-                machine.reset()  # <-- Restart the ESP32
+                utime.sleep(1)  # Delay to ensure the response is sent before resetting
+                machine.reset()
             else:
-                # Handle POST request (save configuration)
-                post_data = request.split('\r\n\r\n')[-1]
                 handle_post_data(post_data)
-                # Send a response to the client indicating success
-                response = "HTTP/1.1 200 OK\r\n\r\nSaved successfully!"
-                conn.sendall(response.encode('utf-8'))
+                conn.sendall("HTTP/1.1 200 OK\r\n\r\nSaved successfully!".encode('utf-8'))
         else:
             params = read_config_params()
             html_page = generate_html_page(params)
