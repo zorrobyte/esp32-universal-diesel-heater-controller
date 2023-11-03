@@ -46,72 +46,11 @@ HTML_PAGE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESP32 Configuration</title>
-    <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f7f7f7;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        .container {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            width: 100%;
-            max-width: 500px;
-        }
-        h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        form {
-            display: grid;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            color: #555;
-        }
-        input[type="text"], input[type="password"], input[type="number"], select {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            box-sizing: border-box;
-        }
-        input[type="submit"] {
-            padding: 10px 15px;
-            border: none;
-            border-radius: 5px;
-            background-color: #007bff;
-            color: white;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        input[type="submit"]:hover {
-            background-color: #0056b3;
-        }
-        .restart-btn {
-            background-color: #dc3545;
-        }
-        .restart-btn:hover {
-            background-color: #c82333;
-        }
-    </style>
+    <title>ZorroBurner Configuration</title>
 </head>
 <body>
     <div class="container">
-        <h1>ESP32 Configuration</h1>
+        <h1>ZorroBurner Configuration</h1>
         <form action="/set" method="post">
             {} <!-- Form fields will be injected here -->
             <input type="submit" value="Save">
@@ -157,7 +96,6 @@ def pretty_print_json(data, indent=4, level=0):
     return "{\n" + ",\n".join(items) + "\n" + ' ' * (level - 1) * indent + "}"
 
 
-# Handle POST data and update config.json
 def handle_post_data(data):
     params = read_config_params()
 
@@ -177,12 +115,15 @@ def handle_post_data(data):
                     value = float(value) if '.' in value else int(value)
                 except ValueError:
                     pass  # If not a number, leave as string
-            if section in params and key in params[section]:
-                params[section][key] = value
+            # Ensure that both the section and the key exist before updating
+            if section not in params:
+                params[section] = {}
+            params[section][key] = value
 
     # Write updated parameters back to config.json with custom pretty-printing
     with open('config.json', 'w') as f:
         f.write(pretty_print_json(params))
+    return params  # Returning params is optional, depending on whether you want to use it after calling this function
 
 
 # Web server function
@@ -206,14 +147,11 @@ def web_server():
                 machine.reset()
             else:
                 handle_post_data(post_data)
-                conn.sendall("HTTP/1.1 200 OK\r\n\r\nSaved successfully!".encode('utf-8'))
+                # Redirect to root
+                conn.sendall("HTTP/1.1 303 See Other\r\nLocation: /\r\n\r\n".encode('utf-8'))
         else:
             params = read_config_params()
             html_page = generate_html_page(params)
-            conn.sendall(html_page.encode('utf-8'))
+            conn.sendall("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n".encode('utf-8') + html_page.encode('utf-8'))
 
         conn.close()
-
-
-# Start the web server
-web_server()

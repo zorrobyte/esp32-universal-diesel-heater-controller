@@ -1,70 +1,70 @@
 {
-    "GeneralSettings": {
-        "USE_WEBSERVER": true,
-        "USE_WIFI": false,
-        "USE_MQTT": false,
-        "IS_WATER_HEATER": false,
-        "HAS_SECOND_PUMP": false,
-        "IS_SIMULATION": false
-    },
-    "NetworkSettings": {
-        "SSID": "SSID",
-        "PASSWORD": "PASSWORD",
-        "MQTT_SERVER": "10.0.0.137",
-        "MQTT_CLIENT_ID": "esp32_oshw_controller",
-        "MQTT_USERNAME": "USERNAME",
-        "MQTT_PASSWORD": "PASSWORD",
-        "SENSOR_VALUES_TOPIC": "sensors/values",
-        "SET_TEMP_TOPIC": "set/temperature",
-        "COMMAND_TOPIC": "command"
-    },
-    "SafetyLimits": {
-        "EXHAUST_SAFE_TEMP": 160,
-        "OUTPUT_SAFE_TEMP": 90
-    },
-    "SensorSettings": {
-        "OUTPUT_SENSOR_TYPE": "NTC_50k",
-        "OUTPUT_SENSOR_BETA": 3950,
-        "EXHAUST_SENSOR_TYPE": "PTC_1k",
-        "EXHAUST_SENSOR_BETA": 3000
-    },
-    "TemperatureControl": {
-        "TARGET_TEMP": 22.0,
-        "CONTROL_MAX_DELTA": 20
-    },
-    "FanControl": {
-        "FAN_RPM_SENSOR": false,
-        "MIN_FAN_RPM": 2000,
-        "MAX_FAN_RPM": 5000,
-        "FAN_MAX_DUTY": 1023,
-        "FAN_START_PERCENTAGE": 40,
-        "MIN_FAN_PERCENTAGE": 20,
-        "MAX_FAN_PERCENTAGE": 60
-    },
-    "FuelPumpControl": {
-        "MIN_PUMP_FREQUENCY": 1.0,
-        "MAX_PUMP_FREQUENCY": 5.0,
-        "PUMP_ON_TIME": 0.02
-    },
-    "EmergencyHandling": {
-        "FAILURE_STATE_RETRIES": 3,
-        "EMERGENCY_STOP_TIMER": 600000
-    },
-    "StartupSettings": {
-        "STARTUP_TIME_LIMIT": 300,
-        "GLOW_PLUG_HEAT_UP_TIME": 60,
-        "INITIAL_FAN_SPEED_PERCENTAGE": 20
-    },
-    "ShutdownSettings": {
-        "SHUTDOWN_TIME_LIMIT": 300,
-        "COOLDOWN_MIN_TIME": 30,
-        "EXHAUST_SHUTDOWN_TEMP": 40.0
-    },
-    "FlameOutDetection": {
-        "EXHAUST_TEMP_HISTORY_LENGTH": 5,
-        "MIN_TEMP_DELTA": 2.0
-    },
-    "LoggingLevel": {
-        "LOG_LEVEL": 3
-    }
+"FuelPumpControl": {
+    "MAX_PUMP_FREQUENCY": 8.0,
+    "PUMP_ON_TIME": 0.02,
+    "MIN_PUMP_FREQUENCY": 1.0
+},
+"ShutdownSettings": {
+    "EXHAUST_SHUTDOWN_TEMP": 40.0,
+    "SHUTDOWN_TIME_LIMIT": 300,
+    "COOLDOWN_MIN_TIME": 30
+},
+"NetworkSettings": {
+    "MQTT_CLIENT_ID": "esp32_oshw_controller",
+    "SET_TEMP_TOPIC": "set/temperature",
+    "MQTT_USERNAME": "USERNAME",
+    "COMMAND_TOPIC": "comm",
+    "PASSWORD": "PASSWORD",
+    "SENSOR_VALUES_TOPIC": "sensors/values",
+    "MQTT_SERVER": "10.0.0.137",
+    "SSID": "SSID",
+    "MQTT_PASSWORD": "PASSWORD"
+},
+"EmergencyHandling": {
+    "FAILURE_STATE_RETRIES": 3,
+    "EMERGENCY_STOP_TIMER": 600000
+},
+"FanControl": {
+    "MIN_FAN_PERCENTAGE": 20,
+    "MIN_FAN_RPM": 2000,
+    "MAX_FAN_PERCENTAGE": 60,
+    "FAN_START_PERCENTAGE": 40,
+    "FAN_MAX_DUTY": 1023,
+    "FAN_RPM_SENSOR": false,
+    "MAX_FAN_RPM": 5000
+},
+"StartupSettings": {
+    "STARTUP_TIME_LIMIT": 300,
+    "GLOW_PLUG_HEAT_UP_TIME": 60,
+    "INITIAL_FAN_SPEED_PERCENTAGE": 20
+},
+"TemperatureControl": {
+    "CONTROL_MAX_DELTA": 20,
+    "TARGET_TEMP": 22.0
+},
+"SensorSettings": {
+    "OUTPUT_SENSOR_TYPE": "NTC_50k",
+    "EXHAUST_SENSOR_TYPE": "PTC_1k",
+    "OUTPUT_SENSOR_BETA": 3950,
+    "EXHAUST_SENSOR_BETA": 3000
+},
+"GeneralSettings": {
+    "USE_WEBSERVER": true,
+    "USE_WIFI": false,
+    "IS_WATER_HEATER": false,
+    "USE_MQTT": false,
+    "HAS_SECOND_PUMP": false,
+    "IS_SIMULATION": false
+},
+"FlameOutDetection": {
+    "EXHAUST_TEMP_HISTORY_LENGTH": 5,
+    "MIN_TEMP_DELTA": 2.0
+},
+"LoggingLevel": {
+    "LOG_LEVEL": 3
+},
+"SafetyLimits": {
+    "EXHAUST_SAFE_TEMP": 160,
+    "OUTPUT_SAFE_TEMP": 90
+}
 }

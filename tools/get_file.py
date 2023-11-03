@@ -4,6 +4,7 @@ from ampy.files import Files
 # Replace 'COM5' with the appropriate port on your system
 port = 'COM5'
 
+
 def get_file(filename):
     try:
         pyb = Pyboard(port)
@@ -17,5 +18,6 @@ def get_file(filename):
     finally:
         pyb.close()
 
+
 # Call the function with the name of the file you want to retrieve
-get_file('config.py')
+get_file('config.json')

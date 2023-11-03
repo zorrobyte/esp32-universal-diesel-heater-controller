@@ -131,5 +131,6 @@ if __name__ == "__main__":
     if config.FAN_RPM_SENSOR:
         _thread.start_new_thread(fanPID.fan_control_thread, ())
     if config.USE_WEBSERVER:
-        _thread.start_new_thread(webserver.web_server(), ())
+        _thread.start_new_thread(webserver.web_server, ())
     main()
+
