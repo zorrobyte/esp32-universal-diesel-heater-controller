@@ -34,6 +34,7 @@ import utime
 from machine import Timer
 from states import stateMachine, emergencyStop
 from lib import sensors, networking, fanPID
+import webserver
 
 # Initialize the WDT with a 10-second timeout
 wdt = machine.WDT(id=0, timeout=10000)  # 10 seconds
@@ -129,4 +130,6 @@ if __name__ == "__main__":
     _thread.start_new_thread(run_networking_thread, ())
     if config.FAN_RPM_SENSOR:
         _thread.start_new_thread(fanPID.fan_control_thread, ())
+    if config.USE_WEBSERVER:
+        _thread.start_new_thread(webserver.web_server(), ())
     main()

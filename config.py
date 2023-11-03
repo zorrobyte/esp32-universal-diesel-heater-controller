@@ -33,6 +33,7 @@ import utime
 # ┌─────────────────────┐
 # │ General Settings    │
 # └─────────────────────┘
+USE_WEBSERVER = True  # Built in AP and webpage for modifying settings
 USE_WIFI = False  # Enable or disable Wi-Fi functionality
 USE_MQTT = False  # Enable or disable MQTT functionality
 IS_WATER_HEATER = False  # Set to True if this device is controlling a water or coolant heater
