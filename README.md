@@ -43,14 +43,11 @@ Note that the simulator code is now old, but it can still be useful and fun to p
 
 ## Software Dependencies:
 
-- `machine` for hardware interfacing
-- `time` for delays and timing
-- `network` for WiFi communication
-- `umqtt.simple` for MQTT communication
+- imports are all based on the built-in MicroPython distribution. Shouldn't need additional imports.
 
 ## Setup:
 
-1. Connect the ESP32 board and other hardware components according to the pin definitions in the code (will be basing hardware on Webastardo)
+1. Connect the ESP32/Raspberry Pi Pico/MicroPython compataible board and other hardware components according to the pin definitions in the code (will be basing hardware on Webastardo, eventually)
 2. Replace `MYSSID` and `PASSWORD` in the code with your WiFi SSID and password.
 3. Set the `MQTT_SERVER` variable to your MQTT broker's IP address (need to make this optional)
 4. GO THROUGH THE CONFIG.py and UNDERSTAND and READ THE COMMENTS.
