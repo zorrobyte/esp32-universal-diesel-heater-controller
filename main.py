@@ -29,7 +29,7 @@
 
 import machine
 import _thread
-import config
+import hardwareConfig as config
 import utime
 from machine import Timer
 from states import stateMachine, emergencyStop

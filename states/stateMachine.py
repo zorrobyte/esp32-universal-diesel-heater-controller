@@ -27,7 +27,7 @@
 # Stay safe and think before you act.                              #
 ####################################################################
 
-import config
+import hardwareConfig as config
 from states import startup, shutdown, control
 
 

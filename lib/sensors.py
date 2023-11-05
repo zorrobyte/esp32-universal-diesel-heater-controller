@@ -28,7 +28,7 @@
 ####################################################################
 
 import math
-import config
+import hardwareConfig as config
 
 # Predefined R0, and T0 values for common thermistors
 common_thermistors = {

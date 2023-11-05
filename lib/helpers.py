@@ -28,7 +28,7 @@
 ####################################################################
 
 # Common helper functions
-import config
+import hardwareConfig as config
 
 
 def set_fan_percentage(speed_percentage):

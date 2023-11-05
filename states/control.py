@@ -27,7 +27,7 @@
 # Stay safe and think before you act.                              #
 ####################################################################
 
-import config
+import hardwareConfig as config
 from lib import helpers
 
 # Initialize a list to store the last N exhaust temperatures

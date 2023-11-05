@@ -58,6 +58,9 @@ FAN_RPM_SENSOR = config['FanControl']['FAN_RPM_SENSOR']
 MIN_FAN_RPM = config['FanControl']['MIN_FAN_RPM']
 MAX_FAN_RPM = config['FanControl']['MAX_FAN_RPM']
 FAN_MAX_DUTY = config['FanControl']['FAN_MAX_DUTY']
+MIN_FAN_PERCENTAGE = config['FanControl']['MIN_FAN_PERCENTAGE']
+MAX_FAN_PERCENTAGE = config['FanControl']['MAX_FAN_PERCENTAGE']
+FAN_START_PERCENTAGE = config['FanControl']['FAN_START_PERCENTAGE']
 
 # ┌─────────────────────┐
 # │ Fuel Pump Control   │

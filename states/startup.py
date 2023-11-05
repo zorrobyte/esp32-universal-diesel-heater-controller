@@ -27,7 +27,7 @@
 # Stay safe and think before you act.                              #
 ####################################################################
 
-import config
+import hardwareConfig as config
 import utime
 import main
 from lib import helpers

@@ -28,7 +28,7 @@
 ####################################################################
 
 import utime
-import config
+import hardwareConfig as config
 import machine
 
 # Initialize global variables
