@@ -1,6 +1,6 @@
 {
 "FuelPumpControl": {
-    "MAX_PUMP_FREQUENCY": 8.0,
+    "MAX_PUMP_FREQUENCY": 5.0,
     "PUMP_ON_TIME": 0.02,
     "MIN_PUMP_FREQUENCY": 1.0
 },
@@ -21,7 +21,6 @@
     "MQTT_PASSWORD": "PASSWORD"
 },
 "EmergencyHandling": {
-    "FAILURE_STATE_RETRIES": 3,
     "EMERGENCY_STOP_TIMER": 600000
 },
 "FanControl": {
@@ -35,11 +34,12 @@
 },
 "StartupSettings": {
     "STARTUP_TIME_LIMIT": 300,
+    "FAILURE_STATE_RETRIES": 3,
     "GLOW_PLUG_HEAT_UP_TIME": 60,
     "INITIAL_FAN_SPEED_PERCENTAGE": 20
 },
 "TemperatureControl": {
-    "CONTROL_MAX_DELTA": 20,
+    "CONTROL_MAX_DELTA": 5,
     "TARGET_TEMP": 22.0
 },
 "SensorSettings": {

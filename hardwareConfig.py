@@ -72,13 +72,13 @@ PUMP_ON_TIME = config['FuelPumpControl']['PUMP_ON_TIME']
 # ┌─────────────────────┐
 # │ Emergency Handling  │
 # └─────────────────────┘
-FAILURE_STATE_RETRIES = config['EmergencyHandling']['FAILURE_STATE_RETRIES']
 EMERGENCY_STOP_TIMER = config['EmergencyHandling']['EMERGENCY_STOP_TIMER']
 
 # ┌─────────────────────┐
 # │ Startup Settings    │
 # └─────────────────────┘
 STARTUP_TIME_LIMIT = config['StartupSettings']['STARTUP_TIME_LIMIT']
+FAILURE_STATE_RETRIES = config['StartupSettings']['FAILURE_STATE_RETRIES']
 GLOW_PLUG_HEAT_UP_TIME = config['StartupSettings']['GLOW_PLUG_HEAT_UP_TIME']
 INITIAL_FAN_SPEED_PERCENTAGE = config['StartupSettings']['INITIAL_FAN_SPEED_PERCENTAGE']
 
