@@ -105,7 +105,7 @@ def start_up():
                     elif initial_exhaust_temp + 5 < avg_exhaust_temp:
                         config.fan_speed_percentage = min(config.fan_speed_percentage + 20, 100)
                         helpers.set_fan_percentage(config.fan_speed_percentage)
-                        config.pump_frequency = min(config.pump_frequency + config.MIN_PUMP_FREQUENCY, config.MAX_PUMP_FREQUENCY)
+                        config.pump_frequency = min(config.pump_frequency + 1, config.MAX_PUMP_FREQUENCY)
                         state_message(state,
                                       f"Step {step} successful. Fan: {config.fan_speed_percentage}%, Fuel Pump: {config.pump_frequency} Hz")
                         initial_exhaust_temp = avg_exhaust_temp
